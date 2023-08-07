@@ -1,19 +1,19 @@
 import java.util.Scanner;
 
 public class Main {
+
+    static final int MAX_KIEKIS = 100;
+    static Scanner in = new Scanner(System.in);
+    static int[] ids = new int[MAX_KIEKIS];
+    static String[] vardai = new String[MAX_KIEKIS];
+    static String[] slaptazodziai = new String[MAX_KIEKIS];
+    static String[] emailai = new String[MAX_KIEKIS];
+    static Lytis[] lytys = new Lytis[MAX_KIEKIS];
+
+    static int n = 0; // Ivestu vartotoju kiekis
+
     public static void main(String[] args) {
-        final int MAX_KIEKIS = 100;
-
-        Scanner in = new Scanner(System.in);
-
-        int[] ids = new int[MAX_KIEKIS];
-        String[] vardai = new String[MAX_KIEKIS];
-        String[] slaptazodziai = new String[MAX_KIEKIS];
-        String[] emailai = new String[MAX_KIEKIS];
-        Lytis[] lytys = new Lytis[MAX_KIEKIS];
-
         int pasirinkimas;
-        int n = 0; // Ivestu vartotoju kiekis
 
         menu:
         while (true) {
@@ -26,106 +26,9 @@ public class Main {
 
             pasirinkimas = in.nextInt();
             switch (pasirinkimas) {
-                case 1 -> {
-
-                    if (n == MAX_KIEKIS) {
-                        System.out.println("Daugiau vartotoju ivesti nebegalima!");
-                        break;
-                    }
-
-                    System.out.print("Iveskite id: ");
-                    int id = in.nextInt();
-
-                    System.out.print("Iveskite varda: ");
-                    String vardas = in.next();
-
-                    System.out.print("Iveskite slaptazodi: ");
-                    String slaptazodis = in.next();
-
-                    System.out.print("Iveskite slaptazodi(dar karta): ");
-                    String slaptazodis2 = in.next();
-
-                    System.out.print("Iveskite email: ");
-                    String email = in.next();
-
-                    System.out.print("Iveskite lyti: ");
-                    String lytisString = in.next();
-
-                    Lytis lytis = switch (lytisString.toLowerCase()) {
-                        case "vyras" -> Lytis.VYRAS;
-                        case "moteris" -> Lytis.MOTERIS;
-                        default -> Lytis.NEZINOMA;
-                    };
-
-                    if (vardas.length() < 3) {
-                        System.out.println("Vartotojo vardas per trumpas!");
-                    } else if (!slaptazodis.equals(slaptazodis2)) {
-                        System.out.println("Slaptazodziai nesutampa!");
-                    } else if (!email.contains("@")) {
-                        System.out.println("Neteisingas email formatas!");
-                    } else {
-                        System.out.println("Vartotojas sukurtas.");
-                        ids[n] = id;
-                        vardai[n] = vardas;
-                        slaptazodziai[n] = slaptazodis;
-                        emailai[n] = email;
-                        lytys[n] = lytis;
-                        n++;
-                    }
-                }
-                case 2 -> {
-                    System.out.println("Paskutinis ivestas vartotojas yra indeksu " + (n - 1));
-                    System.out.print("Kuri vartotoja norite keisti: ");
-                    int keiciamasId = in.nextInt();
-                    if (keiciamasId < n) {
-                        System.out.print("Iveskite id: ");
-                        int id = in.nextInt();
-
-                        System.out.print("Iveskite varda: ");
-                        String vardas = in.next();
-
-                        System.out.print("Iveskite slaptazodi: ");
-                        String slaptazodis = in.next();
-
-                        System.out.print("Iveskite slaptazodi(dar karta): ");
-                        String slaptazodis2 = in.next();
-
-                        System.out.print("Iveskite email: ");
-                        String email = in.next();
-
-                        System.out.print("Iveskite lyti: ");
-                        String lytisString = in.next();
-
-                        Lytis lytis = switch (lytisString.toLowerCase()) {
-                            case "vyras" -> Lytis.VYRAS;
-                            case "moteris" -> Lytis.MOTERIS;
-                            default -> Lytis.NEZINOMA;
-                        };
-
-                        if (vardas.length() < 3) {
-                            System.out.println("Vartotojo vardas per trumpas!");
-                        } else if (!slaptazodis.equals(slaptazodis2)) {
-                            System.out.println("Slaptazodziai nesutampa!");
-                        } else if (!email.contains("@")) {
-                            System.out.println("Neteisingas email formatas!");
-                        } else {
-                            System.out.println("Vartotojas pakeistas.");
-                            ids[keiciamasId] = id;
-                            vardai[keiciamasId] = vardas;
-                            slaptazodziai[keiciamasId] = slaptazodis;
-                            emailai[keiciamasId] = email;
-                            lytys[keiciamasId] = lytis;
-                        }
-                    } else {
-                        System.out.println("indeksas " + keiciamasId + " yra netinkamas. Galimos ribos tarp 0 ir " + (n - 1));
-                    }
-                }
-                case 3 -> {
-                    for (int i = 0; i < n; i++) {
-                        System.out.printf("Id: %d | Vardas: %s | Slaptazodis: %s | Email: %s | Lytis: %s\n",
-                                ids[i], vardai[i], slaptazodziai[i], emailai[i], lytys[i]);
-                    }
-                }
+                case 1 -> ivestiVartotoja();
+                case 2 -> modifikuotiVartotoja();
+                case 3 -> spausdintiVartotojus();
                 case 4 -> {
                     break menu;
                 }
@@ -135,5 +38,114 @@ public class Main {
 
         System.out.println("Programa baigia darba!");
         in.close();
+    }
+
+    private static void modifikuotiVartotoja() {
+        System.out.println("Paskutinis ivestas vartotojas yra indeksu " + (n - 1));
+        System.out.print("Kuri vartotoja norite keisti: ");
+        int keiciamasId = in.nextInt();
+        if (keiciamasId < n) {
+            System.out.print("Iveskite id: ");
+            int id = in.nextInt();
+
+            System.out.print("Iveskite varda: ");
+            String vardas = in.next();
+
+            System.out.print("Iveskite slaptazodi: ");
+            String slaptazodis = in.next();
+
+            System.out.print("Iveskite slaptazodi(dar karta): ");
+            String slaptazodis2 = in.next();
+
+            System.out.print("Iveskite email: ");
+            String email = in.next();
+
+            System.out.print("Iveskite lyti: ");
+            String lytisString = in.next();
+
+            Lytis lytis = stringToLytis(lytisString);
+
+            if (validation(vardas, slaptazodis, slaptazodis2, email)) {
+                System.out.println("Vartotojas pakeistas.");
+                ids[keiciamasId] = id;
+                vardai[keiciamasId] = vardas;
+                slaptazodziai[keiciamasId] = slaptazodis;
+                emailai[keiciamasId] = email;
+                lytys[keiciamasId] = lytis;
+            }
+        } else {
+            System.out.println("indeksas " + keiciamasId + " yra netinkamas. Galimos ribos tarp 0 ir " + (n - 1));
+        }
+    }
+
+    private static void ivestiVartotoja() {
+        if (n == MAX_KIEKIS) {
+            System.out.println("Daugiau vartotoju ivesti nebegalima!");
+            return;
+        }
+
+        System.out.print("Iveskite id: ");
+        int id = in.nextInt();
+
+        System.out.print("Iveskite varda: ");
+        String vardas = in.next();
+
+        System.out.print("Iveskite slaptazodi: ");
+        String slaptazodis = in.next();
+
+        System.out.print("Iveskite slaptazodi(dar karta): ");
+        String slaptazodis2 = in.next();
+
+        System.out.print("Iveskite email: ");
+        String email = in.next();
+
+        System.out.print("Iveskite lyti: ");
+        String lytisString = in.next();
+
+        Lytis lytis = stringToLytis(lytisString);
+
+        if (validation(vardas, slaptazodis, slaptazodis2, email)) {
+            System.out.println("Vartotojas sukurtas.");
+            ids[n] = id;
+            vardai[n] = vardas;
+            slaptazodziai[n] = slaptazodis;
+            emailai[n] = email;
+            lytys[n] = lytis;
+            n++;
+        }
+    }
+
+    private static void spausdintiVartotojus() {
+        for (int i = 0; i < n; i++) {
+            System.out.printf("Id: %d | Vardas: %s | Slaptazodis: %s | Email: %s | Lytis: %s\n",
+                    ids[i], vardai[i], slaptazodziai[i], emailai[i], lytys[i]);
+        }
+    }
+
+    private static boolean validation(String vardas, String slaptazodis, String slaptazodis2, String email) {
+        if (vardas.length() < 3) {
+            System.out.println("Vartotojo vardas per trumpas!");
+            return false;
+        }
+
+        if (!slaptazodis.equals(slaptazodis2)) {
+            System.out.println("Slaptazodziai nesutampa!");
+            return false;
+        }
+
+        if (!email.contains("@")) {
+            System.out.println("Neteisingas email formatas!");
+            return false;
+        }
+
+        return true;
+    }
+
+    private static Lytis stringToLytis(String lytisString) {
+        return switch (lytisString.toLowerCase()) {
+            case "vyras" -> Lytis.VYRAS;
+            case "moteris" -> Lytis.MOTERIS;
+            default -> Lytis.NEZINOMA;
+        };
     }
 }
