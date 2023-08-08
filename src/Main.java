@@ -1,15 +1,14 @@
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 public class Main {
-
-    static final int MAX_KIEKIS = 100;
-
     static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     static Scanner in = new Scanner(System.in);
 
-    static Vartotojas[] vartotojai = new Vartotojas[MAX_KIEKIS];
+    static List<Vartotojas> vartotojai = new ArrayList<>();
 
     public static void main(String[] args) {
         int pasirinkimas;
@@ -19,16 +18,18 @@ public class Main {
             System.out.print("""
                     1 - Ivesti vartotoja
                     2 - Pakeisti esama vartotoja
-                    3 - Atspausdinti vartotojus
-                    4 - Baigti programa
-                    Jusu pasirinkimas: \s""");
+                    3 - Trinti vartotoja
+                    4 - Atspausdinti vartotojus
+                    5 - Baigti programa
+                    Jusu pasirinkimas:\s""");
 
             pasirinkimas = in.nextInt();
             switch (pasirinkimas) {
                 case 1 -> ivestiVartotoja();
                 case 2 -> modifikuotiVartotoja();
-                case 3 -> spausdintiVartotojus();
-                case 4 -> {
+                case 3 -> trintiVartotoja();
+                case 4 -> spausdintiVartotojus();
+                case 5 -> {
                     break menu;
                 }
                 default -> System.out.println("Blogas pasirinkimas!");
@@ -40,10 +41,6 @@ public class Main {
     }
 
     private static void ivestiVartotoja() {
-        if (Vartotojas.getKiekis() == MAX_KIEKIS) {
-            System.out.println("Daugiau vartotoju ivesti nebegalima!");
-            return;
-        }
 
         System.out.print("Iveskite varda: ");
         String vardas = in.next();
@@ -67,16 +64,16 @@ public class Main {
         LocalDate gimimoData = LocalDate.parse(gimimoDataString, DATE_FORMATTER);
 
         if (validation(vardas, slaptazodis, slaptazodis2, email)) {
+            vartotojai.add(new Vartotojas(vardas, slaptazodis, email, lytis, gimimoData));
             System.out.println("Vartotojas sukurtas.");
-            vartotojai[Vartotojas.getKiekis()] = new Vartotojas(vardas, slaptazodis, email, lytis, gimimoData);
         }
     }
 
     private static void modifikuotiVartotoja() {
-        System.out.println("Paskutinis ivestas vartotojas yra indeksu " + (Vartotojas.getKiekis() - 1));
+        System.out.println("Paskutinis ivestas vartotojas yra indeksu " + (vartotojai.size() - 1));
         System.out.print("Kuri vartotoja norite keisti: ");
         int keiciamasId = in.nextInt();
-        if (keiciamasId < Vartotojas.getKiekis()) {
+        if (keiciamasId < vartotojai.size()) {
 
             System.out.print("Iveskite varda: ");
             String vardas = in.next();
@@ -97,20 +94,35 @@ public class Main {
 
             if (validation(vardas, slaptazodis, slaptazodis2, email)) {
                 System.out.println("Vartotojas pakeistas.");
-                Vartotojas vart = vartotojai[keiciamasId];
+                Vartotojas vart = vartotojai.get(keiciamasId);
                 vart.setVardas(vardas);
                 vart.setSlaptazodis(slaptazodis);
                 vart.setEmail(email);
                 vart.setLytis(lytis);
+                System.out.println("Vartotojas pakoreguotas.");
             }
         } else {
-            System.out.println("indeksas " + keiciamasId + " yra netinkamas. Galimos ribos tarp 0 ir " + (Vartotojas.getKiekis() - 1));
+            System.out.println("indeksas " + keiciamasId + " yra netinkamas. Galimos ribos tarp 0 ir " + (vartotojai.size() - 1));
+        }
+    }
+
+    private static void trintiVartotoja() {
+        System.out.println("Paskutinis ivestas vartotojas yra indeksu " + (vartotojai.size() - 1));
+        System.out.print("Kuri vartotoja norite istrinti: ");
+        int trinamasId = in.nextInt();
+        if (trinamasId < vartotojai.size()) {
+            vartotojai.remove(trinamasId);
+            System.out.println("Vartotojas istrintas.");
+        } else {
+            System.out.println("indeksas " + trinamasId + " yra netinkamas. Galimos ribos tarp 0 ir " + (vartotojai.size() - 1));
         }
     }
 
     private static void spausdintiVartotojus() {
-        for (int i = 0; i < Vartotojas.getKiekis(); i++) {
-            System.out.println(vartotojai[i]);
+        int i = 0;
+        for (var v : vartotojai) {
+            System.out.print(i++ + " | ");
+            System.out.println(v);
         }
     }
 

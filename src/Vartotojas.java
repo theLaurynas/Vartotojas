@@ -4,7 +4,7 @@ import java.time.format.DateTimeFormatter;
 
 public class Vartotojas {
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd, HH:mm:ss");
-    private static int kiekis = 0; // Ivestu vartotoju kiekis
+    private static int idCounter = 0; // Ivestu vartotoju kiekis
     private final LocalDateTime regData = LocalDateTime.now();
     private final LocalDate gimimoData;
     private int id;
@@ -15,16 +15,12 @@ public class Vartotojas {
 
 
     public Vartotojas(String vardas, String slaptazodis, String email, Lytis lytis, LocalDate gimimoData) {
-        this.id = kiekis++;
+        this.id = idCounter++;
         this.vardas = vardas;
         this.slaptazodis = slaptazodis;
         this.email = email;
         this.lytis = lytis;
         this.gimimoData = gimimoData;
-    }
-
-    public static int getKiekis() {
-        return kiekis;
     }
 
     @Override
