@@ -1,3 +1,4 @@
+import java.io.Console;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -6,8 +7,8 @@ import java.util.Scanner;
 public class Main {
     static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     static Scanner in = new Scanner(System.in);
-
     static HashMap<Integer, Vartotojas> vartotojai = new HashMap<>();
+    static Console console = System.console();
 
     public static void main(String[] args) {
         int pasirinkimas;
@@ -44,11 +45,22 @@ public class Main {
         System.out.print("Iveskite varda: ");
         String vardas = in.next();
 
-        System.out.print("Iveskite slaptazodi: ");
-        String slaptazodis = in.next();
+        String slaptazodis;
+        String slaptazodis2;
+
+        if (console != null) {
+            slaptazodis = new String(console.readPassword());
+        } else {
+            slaptazodis = in.next();
+        }
 
         System.out.print("Iveskite slaptazodi(dar karta): ");
-        String slaptazodis2 = in.next();
+
+        if (console != null) {
+            slaptazodis2 = new String(console.readPassword());
+        } else {
+            slaptazodis2 = in.next();
+        }
 
         System.out.print("Iveskite email: ");
         String email = in.next();
@@ -91,10 +103,25 @@ public class Main {
                         vart.setVardas(vardas);
                 }
                 case 2 -> {
+                    String slaptazodis;
+                    String slaptazodis2;
+
                     System.out.print("Iveskite slaptazodi: ");
-                    String slaptazodis = in.next();
+
+                    if (console != null) {
+                        slaptazodis = new String(console.readPassword());
+                    } else {
+                        slaptazodis = in.next();
+                    }
+
                     System.out.print("Iveskite slaptazodi(dar karta): ");
-                    String slaptazodis2 = in.next();
+
+                    if (console != null) {
+                        slaptazodis2 = new String(console.readPassword());
+                    } else {
+                        slaptazodis2 = in.next();
+                    }
+
                     if (isPassValid(slaptazodis, slaptazodis2))
                         vart.setSlaptazodis(slaptazodis);
                 }
