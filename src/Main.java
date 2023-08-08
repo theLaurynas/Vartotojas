@@ -1,8 +1,12 @@
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Scanner;
 
 public class Main {
 
     static final int MAX_KIEKIS = 100;
+
+    static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     static Scanner in = new Scanner(System.in);
 
     static Vartotojas[] vartotojai = new Vartotojas[MAX_KIEKIS];
@@ -58,9 +62,13 @@ public class Main {
 
         Lytis lytis = stringToLytis(lytisString);
 
+        System.out.print("Iveskite gimimo data(yyyy-MM-dd): ");
+        String gimimoDataString = in.next();
+        LocalDate gimimoData = LocalDate.parse(gimimoDataString, DATE_FORMATTER);
+
         if (validation(vardas, slaptazodis, slaptazodis2, email)) {
             System.out.println("Vartotojas sukurtas.");
-            vartotojai[Vartotojas.getKiekis()] = new Vartotojas(vardas, slaptazodis, email, lytis);
+            vartotojai[Vartotojas.getKiekis()] = new Vartotojas(vardas, slaptazodis, email, lytis, gimimoData);
         }
     }
 
