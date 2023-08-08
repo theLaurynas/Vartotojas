@@ -62,7 +62,7 @@ public class Main {
         String gimimoDataString = in.next();
         LocalDate gimimoData = LocalDate.parse(gimimoDataString, DATE_FORMATTER);
 
-        if (validation(vardas, slaptazodis, slaptazodis2, email)) {
+        if (isNameValid(vardas) && isPassValid(slaptazodis, slaptazodis2) && isEmailValid(email)) {
             vartotojai.put(Vartotojas.getIdCounter(), new Vartotojas(vardas, slaptazodis, email, lytis, gimimoData));
             System.out.println("Vartotojas sukurtas.");
         }
@@ -73,33 +73,47 @@ public class Main {
         System.out.print("Kuri vartotoja norite keisti: ");
         int keiciamasId = in.nextInt();
         if (vartotojai.containsKey(keiciamasId)) {
+            System.out.print("""
+                    1 - vardas
+                    2 - slaptazodis
+                    3 - email
+                    4 - lytis
+                    Kuri lauka norite keisti:\s""");
 
-            System.out.print("Iveskite varda: ");
-            String vardas = in.next();
+            int pasirinkimas = in.nextInt();
+            Vartotojas vart = vartotojai.get(keiciamasId);
 
-            System.out.print("Iveskite slaptazodi: ");
-            String slaptazodis = in.next();
-
-            System.out.print("Iveskite slaptazodi(dar karta): ");
-            String slaptazodis2 = in.next();
-
-            System.out.print("Iveskite email: ");
-            String email = in.next();
-
-            System.out.print("Iveskite lyti: ");
-            String lytisString = in.next();
-
-            Lytis lytis = stringToLytis(lytisString);
-
-            if (validation(vardas, slaptazodis, slaptazodis2, email)) {
-                System.out.println("Vartotojas pakeistas.");
-                Vartotojas vart = vartotojai.get(keiciamasId);
-                vart.setVardas(vardas);
-                vart.setSlaptazodis(slaptazodis);
-                vart.setEmail(email);
-                vart.setLytis(lytis);
-                System.out.println("Vartotojas pakoreguotas.");
+            switch (pasirinkimas) {
+                case 1 -> {
+                    System.out.print("Iveskite varda: ");
+                    String vardas = in.next();
+                    if (isNameValid(vardas))
+                        vart.setVardas(vardas);
+                }
+                case 2 -> {
+                    System.out.print("Iveskite slaptazodi: ");
+                    String slaptazodis = in.next();
+                    System.out.print("Iveskite slaptazodi(dar karta): ");
+                    String slaptazodis2 = in.next();
+                    if (isPassValid(slaptazodis, slaptazodis2))
+                        vart.setSlaptazodis(slaptazodis);
+                }
+                case 3 -> {
+                    System.out.print("Iveskite email: ");
+                    String email = in.next();
+                    if (isEmailValid(email))
+                        vart.setEmail(email);
+                }
+                case 4 -> {
+                    System.out.print("Iveskite lyti: ");
+                    String lytisString = in.next();
+                    Lytis lytis = stringToLytis(lytisString);
+                    vart.setLytis(lytis);
+                }
+                default -> System.out.println("Blogas pasirinkimas!");
             }
+
+            System.out.println("Vartotojas pakoreguotas.");
         } else {
             System.out.println("indeksas " + keiciamasId + " nerastas");
         }
@@ -123,16 +137,26 @@ public class Main {
         }
     }
 
-    private static boolean validation(String vardas, String slaptazodis, String slaptazodis2, String email) {
+    private static boolean isNameValid(String vardas) {
         if (vardas.length() < 3) {
             System.out.println("Vartotojo vardas per trumpas!");
             return false;
         }
 
+        return true;
+    }
+
+    private static boolean isPassValid(String slaptazodis, String slaptazodis2) {
+
         if (!slaptazodis.equals(slaptazodis2)) {
             System.out.println("Slaptazodziai nesutampa!");
             return false;
         }
+
+        return true;
+    }
+
+    private static boolean isEmailValid(String email) {
 
         if (!email.contains("@")) {
             System.out.println("Neteisingas email formatas!");
