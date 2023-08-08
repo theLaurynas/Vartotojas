@@ -7,8 +7,6 @@ public class Main {
 
     static Vartotojas[] vartotojai = new Vartotojas[MAX_KIEKIS];
 
-    static int n = 0; // Ivestu vartotoju kiekis
-
     public static void main(String[] args) {
         int pasirinkimas;
 
@@ -38,13 +36,10 @@ public class Main {
     }
 
     private static void ivestiVartotoja() {
-        if (n == MAX_KIEKIS) {
+        if (Vartotojas.getKiekis() == MAX_KIEKIS) {
             System.out.println("Daugiau vartotoju ivesti nebegalima!");
             return;
         }
-
-        System.out.print("Iveskite id: ");
-        int id = in.nextInt();
 
         System.out.print("Iveskite varda: ");
         String vardas = in.next();
@@ -65,18 +60,15 @@ public class Main {
 
         if (validation(vardas, slaptazodis, slaptazodis2, email)) {
             System.out.println("Vartotojas sukurtas.");
-            vartotojai[n] = new Vartotojas(id, vardas, slaptazodis, email, lytis);
-            n++;
+            vartotojai[Vartotojas.getKiekis()] = new Vartotojas(vardas, slaptazodis, email, lytis);
         }
     }
 
     private static void modifikuotiVartotoja() {
-        System.out.println("Paskutinis ivestas vartotojas yra indeksu " + (n - 1));
+        System.out.println("Paskutinis ivestas vartotojas yra indeksu " + (Vartotojas.getKiekis() - 1));
         System.out.print("Kuri vartotoja norite keisti: ");
         int keiciamasId = in.nextInt();
-        if (keiciamasId < n) {
-            System.out.print("Iveskite id: ");
-            int id = in.nextInt();
+        if (keiciamasId < Vartotojas.getKiekis()) {
 
             System.out.print("Iveskite varda: ");
             String vardas = in.next();
@@ -98,23 +90,19 @@ public class Main {
             if (validation(vardas, slaptazodis, slaptazodis2, email)) {
                 System.out.println("Vartotojas pakeistas.");
                 Vartotojas vart = vartotojai[keiciamasId];
-                vart.setId(id);
                 vart.setVardas(vardas);
                 vart.setSlaptazodis(slaptazodis);
                 vart.setEmail(email);
                 vart.setLytis(lytis);
             }
         } else {
-            System.out.println("indeksas " + keiciamasId + " yra netinkamas. Galimos ribos tarp 0 ir " + (n - 1));
+            System.out.println("indeksas " + keiciamasId + " yra netinkamas. Galimos ribos tarp 0 ir " + (Vartotojas.getKiekis() - 1));
         }
     }
 
     private static void spausdintiVartotojus() {
-        Vartotojas vart;
-        for (int i = 0; i < n; i++) {
-            vart = vartotojai[i];
-            System.out.printf("Id: %d | Vardas: %s | Slaptazodis: %s | Email: %s | Lytis: %s\n",
-                    vart.getId(), vart.getVardas(), vart.getSlaptazodis(), vart.getEmail(), vart.getLytis());
+        for (int i = 0; i < Vartotojas.getKiekis(); i++) {
+            System.out.println(vartotojai[i]);
         }
     }
 
