@@ -1,14 +1,13 @@
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Scanner;
 
 public class Main {
     static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     static Scanner in = new Scanner(System.in);
 
-    static List<Vartotojas> vartotojai = new ArrayList<>();
+    static HashMap<Integer, Vartotojas> vartotojai = new HashMap<>();
 
     public static void main(String[] args) {
         int pasirinkimas;
@@ -64,7 +63,7 @@ public class Main {
         LocalDate gimimoData = LocalDate.parse(gimimoDataString, DATE_FORMATTER);
 
         if (validation(vardas, slaptazodis, slaptazodis2, email)) {
-            vartotojai.add(new Vartotojas(vardas, slaptazodis, email, lytis, gimimoData));
+            vartotojai.put(Vartotojas.getIdCounter(), new Vartotojas(vardas, slaptazodis, email, lytis, gimimoData));
             System.out.println("Vartotojas sukurtas.");
         }
     }
@@ -73,7 +72,7 @@ public class Main {
         System.out.println("Paskutinis ivestas vartotojas yra indeksu " + (vartotojai.size() - 1));
         System.out.print("Kuri vartotoja norite keisti: ");
         int keiciamasId = in.nextInt();
-        if (keiciamasId < vartotojai.size()) {
+        if (vartotojai.containsKey(keiciamasId)) {
 
             System.out.print("Iveskite varda: ");
             String vardas = in.next();
@@ -102,7 +101,7 @@ public class Main {
                 System.out.println("Vartotojas pakoreguotas.");
             }
         } else {
-            System.out.println("indeksas " + keiciamasId + " yra netinkamas. Galimos ribos tarp 0 ir " + (vartotojai.size() - 1));
+            System.out.println("indeksas " + keiciamasId + " nerastas");
         }
     }
 
@@ -110,18 +109,16 @@ public class Main {
         System.out.println("Paskutinis ivestas vartotojas yra indeksu " + (vartotojai.size() - 1));
         System.out.print("Kuri vartotoja norite istrinti: ");
         int trinamasId = in.nextInt();
-        if (trinamasId < vartotojai.size()) {
+        if (vartotojai.containsKey(trinamasId)) {
             vartotojai.remove(trinamasId);
             System.out.println("Vartotojas istrintas.");
         } else {
-            System.out.println("indeksas " + trinamasId + " yra netinkamas. Galimos ribos tarp 0 ir " + (vartotojai.size() - 1));
+            System.out.println("indeksas " + trinamasId + " nerastas");
         }
     }
 
     private static void spausdintiVartotojus() {
-        int i = 0;
-        for (var v : vartotojai) {
-            System.out.print(i++ + " | ");
+        for (var v : vartotojai.values()) {
             System.out.println(v);
         }
     }

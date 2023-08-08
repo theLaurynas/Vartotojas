@@ -1,2 +1,6 @@
+# direktorijos
 .idea
 out
+
+# failai
+*.iml

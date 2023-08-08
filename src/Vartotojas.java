@@ -23,6 +23,10 @@ public class Vartotojas {
         this.gimimoData = gimimoData;
     }
 
+    public static int getIdCounter() {
+        return idCounter;
+    }
+
     @Override
     public String toString() {
         return String.format("""
