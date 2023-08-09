@@ -1,11 +1,9 @@
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 public class Vartotojas {
-    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd, HH:mm:ss");
     private static int idCounter = 0; // Ivestu vartotoju kiekis
-    private final LocalDateTime regData = LocalDateTime.now();
+    private final LocalDateTime regData;
     private final LocalDate gimimoData;
     private int id;
     private String vardas;
@@ -21,10 +19,25 @@ public class Vartotojas {
         this.email = email;
         this.lytis = lytis;
         this.gimimoData = gimimoData;
+        this.regData = LocalDateTime.now();
+    }
+
+    public Vartotojas(int id, String vardas, String slaptazodis, String email, Lytis lytis, LocalDate gimimoData, LocalDateTime regData) {
+        this.id = id;
+        this.vardas = vardas;
+        this.slaptazodis = slaptazodis;
+        this.email = email;
+        this.lytis = lytis;
+        this.gimimoData = gimimoData;
+        this.regData = regData;
     }
 
     public static int getIdCounter() {
         return idCounter;
+    }
+
+    public static void setIdCounter(int idCounter) {
+        Vartotojas.idCounter = idCounter;
     }
 
     @Override
@@ -32,7 +45,7 @@ public class Vartotojas {
         return String.format("""
                         Id: %d | Vardas: %s | Slaptazodis: %s | Email: %s | Lytis: %s
                         \tReg. data: %s | Gimimo data: %s""",
-                id, vardas, slaptazodis, email, lytis, regData.format(DATE_TIME_FORMATTER), gimimoData);
+                id, vardas, slaptazodis, email, lytis, regData.format(Main.DATE_TIME_FORMATTER), gimimoData);
     }
 
     //<editor-fold desc="Getters/Setters">

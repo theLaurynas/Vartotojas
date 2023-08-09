@@ -8,10 +8,12 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.HashMap;
 import java.util.InputMismatchException;
+import java.util.List;
 import java.util.Scanner;
 
 public class Main {
     static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     static Scanner in = new Scanner(System.in);
 
     static HashMap<Integer, Vartotojas> vartotojai = new HashMap<>();
@@ -19,19 +21,22 @@ public class Main {
     public static void main(String[] args) {
         int pasirinkimas;
 
+        uzkrautiVartotojus();
+
         menu:
         while (true) {
             System.out.print("""
                                         
-                    ┌────────────────────────────────┐
-                    │             MENIU              │
-                    ├────────────────────────────────┤
-                    │ 1 - Ivesti vartotoja           │
-                    │ 2 - Pakeisti esama vartotoja   │
-                    │ 3 - Trinti vartotoja           │
-                    │ 4 - Atspausdinti vartotojus    │
-                    │ 5 - Baigti programa            │
-                    └────────────────────────────────┘
+                    ┌──────────────────────────────────┐
+                    │               MENIU              │
+                    ├──────────────────────────────────┤
+                    │ 1 - Ivesti vartotoja             │
+                    │ 2 - Pakeisti esama vartotoja     │
+                    │ 3 - Trinti vartotoja             │
+                    │ 4 - Atspausdinti vartotojus      │
+                    │ 5 - Uzkrauti vartotojus is failo │
+                    │ 6 - Baigti programa              │
+                    └──────────────────────────────────┘
                       Jusu pasirinkimas:\s""");
 
             try {
@@ -46,7 +51,8 @@ public class Main {
                 case 2 -> modifikuotiVartotoja();
                 case 3 -> trintiVartotoja();
                 case 4 -> spausdintiVartotojus();
-                case 5 -> {
+                case 5 -> uzkrautiVartotojus();
+                case 6 -> {
                     break menu;
                 }
                 default -> System.out.println("Blogas pasirinkimas!");
@@ -231,6 +237,33 @@ public class Main {
             System.out.println("Failas issaugotas vardu: " + filename);
         } catch (IOException e) {
             System.out.println("Failo issaugoti nepavyko!");
+        }
+
+    }
+
+    private static void uzkrautiVartotojus() {
+        int maxId = 0;
+        try {
+            List<String> vartotojaiList = Files.readAllLines(new File("vartotojai.txt").toPath());
+            for (String x : vartotojaiList) {
+                String[] vartStr = x.split(",");
+                int id = Integer.parseInt(vartStr[0]);
+                String vardas = vartStr[1];
+                String slaptazodis = vartStr[2];
+                String email = vartStr[3];
+                Lytis lytis = stringToLytis(vartStr[4]);
+                LocalDate gimimoData = LocalDate.parse(vartStr[5], DATE_FORMATTER);
+                LocalDateTime regData = LocalDateTime.parse(vartStr[6], DATE_TIME_FORMATTER);
+
+                Vartotojas vart = new Vartotojas(id, vardas, slaptazodis, email, lytis, gimimoData, regData);
+                vartotojai.put(id, vart);
+
+                maxId = Math.max(maxId, id);
+            }
+            Vartotojas.setIdCounter(maxId + 1);
+            System.out.println("Vartotojai uzkrauti is failo.");
+        } catch (IOException e) {
+            System.out.println("Vartotoju is failo uzkrauti nepavyko!");
         }
 
     }
