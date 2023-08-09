@@ -1,6 +1,7 @@
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.InputMismatchException;
 import java.util.Scanner;
 
 public class Main {
@@ -22,7 +23,13 @@ public class Main {
                     5 - Baigti programa
                     Jusu pasirinkimas:\s""");
 
-            pasirinkimas = in.nextInt();
+            try {
+                pasirinkimas = in.nextInt();
+            } catch (InputMismatchException e) {
+                pasirinkimas = -1;
+            }
+
+            in.nextLine();
             switch (pasirinkimas) {
                 case 1 -> ivestiVartotoja();
                 case 2 -> modifikuotiVartotoja();
@@ -56,7 +63,14 @@ public class Main {
         System.out.print("Iveskite lyti: ");
         String lytisString = in.next();
 
-        Lytis lytis = stringToLytis(lytisString);
+        Lytis lytis;
+
+        try {
+            lytis = stringToLytis(lytisString);
+        } catch (NetinkamaLytisException e) {
+            System.out.println("Ivesta netinkama lytis, pritaikoma nezinoma!");
+            lytis = Lytis.NEZINOMA;
+        }
 
         System.out.print("Iveskite gimimo data(yyyy-MM-dd): ");
         String gimimoDataString = in.next();
@@ -79,8 +93,13 @@ public class Main {
                     3 - email
                     4 - lytis
                     Kuri lauka norite keisti:\s""");
-
-            int pasirinkimas = in.nextInt();
+            int pasirinkimas;
+            try {
+                pasirinkimas = in.nextInt();
+            } catch (InputMismatchException e) {
+                pasirinkimas = -1;
+            }
+            in.nextLine();
             Vartotojas vart = vartotojai.get(keiciamasId);
 
             switch (pasirinkimas) {
@@ -107,7 +126,15 @@ public class Main {
                 case 4 -> {
                     System.out.print("Iveskite lyti: ");
                     String lytisString = in.next();
-                    Lytis lytis = stringToLytis(lytisString);
+                    Lytis lytis;
+
+                    try {
+                        lytis = stringToLytis(lytisString);
+                    } catch (NetinkamaLytisException e) {
+                        System.out.println("Ivesta netinkama lytis, pritaikoma nezinoma!");
+                        lytis = Lytis.NEZINOMA;
+                    }
+
                     vart.setLytis(lytis);
                 }
                 default -> System.out.println("Blogas pasirinkimas!");
@@ -170,7 +197,7 @@ public class Main {
         return switch (lytisString.toLowerCase()) {
             case "vyras" -> Lytis.VYRAS;
             case "moteris" -> Lytis.MOTERIS;
-            default -> Lytis.NEZINOMA;
+            default -> throw new NetinkamaLytisException();
         };
     }
 }
