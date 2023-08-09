@@ -73,44 +73,45 @@ public class Main {
         System.out.print("Kuri vartotoja norite keisti: ");
         int keiciamasId = in.nextInt();
         if (vartotojai.containsKey(keiciamasId)) {
-            System.out.print("""
-                    1 - vardas
-                    2 - slaptazodis
-                    3 - email
-                    4 - lytis
-                    Kuri lauka norite keisti:\s""");
-
-            int pasirinkimas = in.nextInt();
+            String pasirinkimas;
             Vartotojas vart = vartotojai.get(keiciamasId);
 
-            switch (pasirinkimas) {
-                case 1 -> {
-                    System.out.print("Iveskite varda: ");
-                    String vardas = in.next();
-                    if (isNameValid(vardas))
-                        vart.setVardas(vardas);
-                }
-                case 2 -> {
-                    System.out.print("Iveskite slaptazodi: ");
-                    String slaptazodis = in.next();
-                    System.out.print("Iveskite slaptazodi(dar karta): ");
-                    String slaptazodis2 = in.next();
-                    if (isPassValid(slaptazodis, slaptazodis2))
-                        vart.setSlaptazodis(slaptazodis);
-                }
-                case 3 -> {
-                    System.out.print("Iveskite email: ");
-                    String email = in.next();
-                    if (isEmailValid(email))
-                        vart.setEmail(email);
-                }
-                case 4 -> {
-                    System.out.print("Iveskite lyti: ");
-                    String lytisString = in.next();
-                    Lytis lytis = stringToLytis(lytisString);
-                    vart.setLytis(lytis);
-                }
-                default -> System.out.println("Blogas pasirinkimas!");
+            System.out.print("Ar norite keisti varda(t/n): ");
+            pasirinkimas = in.next();
+            if (pasirinkimas.equalsIgnoreCase("t")) {
+                System.out.print("Iveskite varda: ");
+                String vardas = in.next();
+                if (isNameValid(vardas))
+                    vart.setVardas(vardas);
+            }
+
+            System.out.print("Ar norite keisti slaptazodi(t/n): ");
+            pasirinkimas = in.next();
+            if (pasirinkimas.equalsIgnoreCase("t")) {
+                System.out.print("Iveskite slaptazodi: ");
+                String slaptazodis = in.next();
+                System.out.print("Iveskite slaptazodi(dar karta): ");
+                String slaptazodis2 = in.next();
+                if (isPassValid(slaptazodis, slaptazodis2))
+                    vart.setSlaptazodis(slaptazodis);
+            }
+
+            System.out.print("Ar norite keisti email(t/n): ");
+            pasirinkimas = in.next();
+            if (pasirinkimas.equalsIgnoreCase("t")) {
+                System.out.print("Iveskite email: ");
+                String email = in.next();
+                if (isEmailValid(email))
+                    vart.setEmail(email);
+            }
+
+            System.out.print("Ar norite keisti lyti(t/n): ");
+            pasirinkimas = in.next();
+            if (pasirinkimas.equalsIgnoreCase("t")) {
+                System.out.print("Iveskite lyti: ");
+                String lytisString = in.next();
+                Lytis lytis = stringToLytis(lytisString);
+                vart.setLytis(lytis);
             }
 
             System.out.println("Vartotojas pakoreguotas.");
