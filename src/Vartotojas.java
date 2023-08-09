@@ -40,6 +40,11 @@ public class Vartotojas {
         Vartotojas.idCounter = idCounter;
     }
 
+    public String toCsv() {
+        return String.format("%d,%s,%s,%s,%s,%s,%s",
+                id, vardas, slaptazodis, email, lytis, gimimoData, regData.format(Main.DATE_TIME_FORMATTER));
+    }
+
     @Override
     public String toString() {
         return String.format("""

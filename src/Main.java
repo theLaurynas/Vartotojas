@@ -35,7 +35,8 @@ public class Main {
                     │ 3 - Trinti vartotoja             │
                     │ 4 - Atspausdinti vartotojus      │
                     │ 5 - Uzkrauti vartotojus is failo │
-                    │ 6 - Baigti programa              │
+                    │ 6 - Issaugoti vartotojus i faila │
+                    │ 7 - Baigti programa              │
                     └──────────────────────────────────┘
                       Jusu pasirinkimas:\s""");
 
@@ -52,15 +53,16 @@ public class Main {
                 case 3 -> trintiVartotoja();
                 case 4 -> spausdintiVartotojus();
                 case 5 -> uzkrautiVartotojus();
-                case 6 -> {
+                case 6 -> issaugotiVartotojus();
+                case 7 -> {
                     break menu;
                 }
                 default -> System.out.println("Blogas pasirinkimas!");
             }
         }
-
-        System.out.println("Programa baigia darba!");
+        issaugotiVartotojus();
         in.close();
+        System.out.println("Programa baigia darba!");
     }
 
     private static void ivestiVartotoja() {
@@ -204,7 +206,7 @@ public class Main {
         } catch (InputMismatchException e) {
             pasirinkimas = -1;
         }
-
+        in.nextLine();
         switch (pasirinkimas) {
             case 1 -> isvestiIEkrana();
             case 2 -> issaugotiIFaila();
@@ -238,7 +240,6 @@ public class Main {
         } catch (IOException e) {
             System.out.println("Failo issaugoti nepavyko!");
         }
-
     }
 
     private static void uzkrautiVartotojus() {
@@ -251,7 +252,14 @@ public class Main {
                 String vardas = vartStr[1];
                 String slaptazodis = vartStr[2];
                 String email = vartStr[3];
-                Lytis lytis = stringToLytis(vartStr[4]);
+                Lytis lytis;
+                try {
+                    lytis = stringToLytis(vartStr[4]);
+                } catch (NetinkamaLytisException e) {
+                    System.out.println("Ivesta netinkama lytis, pritaikoma nezinoma!");
+                    lytis = Lytis.NEZINOMA;
+                }
+
                 LocalDate gimimoData = LocalDate.parse(vartStr[5], DATE_FORMATTER);
                 LocalDateTime regData = LocalDateTime.parse(vartStr[6], DATE_TIME_FORMATTER);
 
@@ -266,6 +274,23 @@ public class Main {
             System.out.println("Vartotoju is failo uzkrauti nepavyko!");
         }
 
+    }
+
+    private static void issaugotiVartotojus() {
+        String filename = "vartotojai.txt";
+        File file = new File(filename);
+        StringBuilder sb = new StringBuilder();
+
+        for (var v : vartotojai.values()) {
+            sb.append(v.toCsv()).append("\n");
+        }
+
+        try {
+            Files.writeString(file.toPath(), sb, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
+            System.out.println("Failas issaugotas vardu: " + filename);
+        } catch (IOException e) {
+            System.out.println("Failo issaugoti nepavyko!");
+        }
     }
 
     private static boolean isNameValid(String vardas) {
