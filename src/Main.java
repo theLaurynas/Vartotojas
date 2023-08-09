@@ -30,8 +30,7 @@ public class Main {
                     │ 2 - Pakeisti esama vartotoja   │
                     │ 3 - Trinti vartotoja           │
                     │ 4 - Atspausdinti vartotojus    │
-                    │ 5 - Isvesti vartotojus i faila │
-                    │ 6 - Baigti programa            │
+                    │ 5 - Baigti programa            │
                     └────────────────────────────────┘
                       Jusu pasirinkimas:\s""");
 
@@ -47,8 +46,7 @@ public class Main {
                 case 2 -> modifikuotiVartotoja();
                 case 3 -> trintiVartotoja();
                 case 4 -> spausdintiVartotojus();
-                case 5 -> issaugotiIFaila();
-                case 6 -> {
+                case 5 -> {
                     break menu;
                 }
                 default -> System.out.println("Blogas pasirinkimas!");
@@ -187,17 +185,38 @@ public class Main {
             System.out.println("Nera ne vieno vartotojo!");
             return;
         }
+
+        int pasirinkimas;
+        System.out.print("""
+                Kur norite isvesti vartotojus
+                1 - I ekrana
+                2 - I faila
+                3 - I ekrana ir i faila
+                Jusu pasirinkimas:\s""");
+        try {
+            pasirinkimas = in.nextInt();
+        } catch (InputMismatchException e) {
+            pasirinkimas = -1;
+        }
+
+        switch (pasirinkimas) {
+            case 1 -> isvestiIEkrana();
+            case 2 -> issaugotiIFaila();
+            case 3 -> {
+                isvestiIEkrana();
+                issaugotiIFaila();
+            }
+            default -> System.out.println("Blogas pasirinkimas!");
+        }
+    }
+
+    private static void isvestiIEkrana() {
         for (var v : vartotojai.values()) {
             System.out.println(v);
         }
     }
 
     private static void issaugotiIFaila() {
-        if (vartotojai.isEmpty()) {
-            System.out.println("Nera ne vieno vartotojo!");
-            return;
-        }
-
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy_MM_dd-HH_mm_ss");
         String filename = "vartotojai_" + LocalDateTime.now().format(dtf) + ".txt";
         File file = new File(filename);

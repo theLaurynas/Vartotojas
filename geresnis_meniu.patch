@@ -1,0 +1,74 @@
+diff --git a/src/Main.java b/src/Main.java
+index b95bc62..347b5f5 100644
+--- a/src/Main.java
++++ b/src/Main.java
+@@ -16,13 +16,13 @@ public class Main {
+ 
+     static HashMap<Integer, Vartotojas> vartotojai = new HashMap<>();
+ 
+-    public static void main(String[] args) {
++    public static void main(String[] args) throws InterruptedException {
+         int pasirinkimas;
+ 
+         menu:
+         while (true) {
+             System.out.print("""
+-                                        
++                                
+                     ┌────────────────────────────────┐
+                     │             MENIU              │
+                     ├────────────────────────────────┤
+@@ -33,26 +33,35 @@ public class Main {
+                     │ 5 - Isvesti vartotojus i faila │
+                     │ 6 - Baigti programa            │
+                     └────────────────────────────────┘
+-                      Jusu pasirinkimas:\s""");
+-
+-            try {
+-                pasirinkimas = in.nextInt();
+-            } catch (InputMismatchException e) {
+-                pasirinkimas = -1;
+-            }
+-
+-            in.nextLine();
+-            switch (pasirinkimas) {
+-                case 1 -> ivestiVartotoja();
+-                case 2 -> modifikuotiVartotoja();
+-                case 3 -> trintiVartotoja();
+-                case 4 -> spausdintiVartotojus();
+-                case 5 -> issaugotiIFaila();
+-                case 6 -> {
+-                    break menu;
++                    """);
++            while (true) {
++                System.out.print("  Jusu pasirinkimas: ");
++                try {
++                    pasirinkimas = in.nextInt();
++                } catch (InputMismatchException e) {
++                    pasirinkimas = -1;
+                 }
+-                default -> System.out.println("Blogas pasirinkimas!");
++                in.nextLine();
++                switch (pasirinkimas) {
++                    case 1 -> ivestiVartotoja();
++                    case 2 -> modifikuotiVartotoja();
++                    case 3 -> trintiVartotoja();
++                    case 4 -> spausdintiVartotojus();
++                    case 5 -> issaugotiIFaila();
++                    case 6 -> {
++                        break menu;
++                    }
++                    default -> {
++                        System.out.print("\033[A\r\033[J");
++                        System.out.print("  Blogas pasirinkimas!");
++                        Thread.sleep(2000);
++                        System.out.print("\r\033[J");
++                        continue;
++                    }
++                }
++                break;
+             }
++
+         }
+ 
+         System.out.println("Programa baigia darba!");
