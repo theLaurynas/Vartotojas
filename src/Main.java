@@ -1,4 +1,9 @@
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.HashMap;
@@ -18,15 +23,16 @@ public class Main {
         while (true) {
             System.out.print("""
                                         
-                    ┌──────────────────────────────┐
-                    │             MENIU            │
-                    ├──────────────────────────────┤
-                    │ 1 - Ivesti vartotoja         │
-                    │ 2 - Pakeisti esama vartotoja │
-                    │ 3 - Trinti vartotoja         │
-                    │ 4 - Atspausdinti vartotojus  │
-                    │ 5 - Baigti programa          │
-                    └──────────────────────────────┘
+                    ┌────────────────────────────────┐
+                    │             MENIU              │
+                    ├────────────────────────────────┤
+                    │ 1 - Ivesti vartotoja           │
+                    │ 2 - Pakeisti esama vartotoja   │
+                    │ 3 - Trinti vartotoja           │
+                    │ 4 - Atspausdinti vartotojus    │
+                    │ 5 - Isvesti vartotojus i faila │
+                    │ 6 - Baigti programa            │
+                    └────────────────────────────────┘
                       Jusu pasirinkimas:\s""");
 
             try {
@@ -41,7 +47,8 @@ public class Main {
                 case 2 -> modifikuotiVartotoja();
                 case 3 -> trintiVartotoja();
                 case 4 -> spausdintiVartotojus();
-                case 5 -> {
+                case 5 -> issaugotiIFaila();
+                case 6 -> {
                     break menu;
                 }
                 default -> System.out.println("Blogas pasirinkimas!");
@@ -176,9 +183,37 @@ public class Main {
     }
 
     private static void spausdintiVartotojus() {
+        if (vartotojai.isEmpty()) {
+            System.out.println("Nera ne vieno vartotojo!");
+            return;
+        }
         for (var v : vartotojai.values()) {
             System.out.println(v);
         }
+    }
+
+    private static void issaugotiIFaila() {
+        if (vartotojai.isEmpty()) {
+            System.out.println("Nera ne vieno vartotojo!");
+            return;
+        }
+
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy_MM_dd-HH_mm_ss");
+        String filename = "vartotojai_" + LocalDateTime.now().format(dtf) + ".txt";
+        File file = new File(filename);
+        StringBuilder sb = new StringBuilder();
+
+        for (var v : vartotojai.values()) {
+            sb.append(v).append("\n");
+        }
+
+        try {
+            Files.writeString(file.toPath(), sb, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
+            System.out.println("Failas issaugotas vardu: " + filename);
+        } catch (IOException e) {
+            System.out.println("Failo issaugoti nepavyko!");
+        }
+
     }
 
     private static boolean isNameValid(String vardas) {
