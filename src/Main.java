@@ -1,5 +1,6 @@
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.HashMap;
 import java.util.InputMismatchException;
 import java.util.Scanner;
@@ -16,12 +17,17 @@ public class Main {
         menu:
         while (true) {
             System.out.print("""
-                    1 - Ivesti vartotoja
-                    2 - Pakeisti esama vartotoja
-                    3 - Trinti vartotoja
-                    4 - Atspausdinti vartotojus
-                    5 - Baigti programa
-                    Jusu pasirinkimas:\s""");
+                                        
+                    ┌──────────────────────────────┐
+                    │             MENIU            │
+                    ├──────────────────────────────┤
+                    │ 1 - Ivesti vartotoja         │
+                    │ 2 - Pakeisti esama vartotoja │
+                    │ 3 - Trinti vartotoja         │
+                    │ 4 - Atspausdinti vartotojus  │
+                    │ 5 - Baigti programa          │
+                    └──────────────────────────────┘
+                      Jusu pasirinkimas:\s""");
 
             try {
                 pasirinkimas = in.nextInt();
@@ -47,21 +53,29 @@ public class Main {
     }
 
     private static void ivestiVartotoja() {
-
         System.out.print("Iveskite varda: ");
-        String vardas = in.next();
+        String vardas = in.nextLine();
+        if (!isNameValid(vardas)) {
+            return;
+        }
 
         System.out.print("Iveskite slaptazodi: ");
-        String slaptazodis = in.next();
+        String slaptazodis = in.nextLine();
 
         System.out.print("Iveskite slaptazodi(dar karta): ");
-        String slaptazodis2 = in.next();
+        String slaptazodis2 = in.nextLine();
+        if (!isPassValid(slaptazodis, slaptazodis2)) {
+            return;
+        }
 
         System.out.print("Iveskite email: ");
-        String email = in.next();
+        String email = in.nextLine();
+        if (!isEmailValid(email)) {
+            return;
+        }
 
         System.out.print("Iveskite lyti: ");
-        String lytisString = in.next();
+        String lytisString = in.nextLine();
 
         Lytis lytis;
 
@@ -74,12 +88,15 @@ public class Main {
 
         System.out.print("Iveskite gimimo data(yyyy-MM-dd): ");
         String gimimoDataString = in.next();
+
+        if (!isDateOfBirthValid(gimimoDataString)) {
+            return;
+        }
+
         LocalDate gimimoData = LocalDate.parse(gimimoDataString, DATE_FORMATTER);
 
-        if (isNameValid(vardas) && isPassValid(slaptazodis, slaptazodis2) && isEmailValid(email)) {
-            vartotojai.put(Vartotojas.getIdCounter(), new Vartotojas(vardas, slaptazodis, email, lytis, gimimoData));
-            System.out.println("Vartotojas sukurtas.");
-        }
+        vartotojai.put(Vartotojas.getIdCounter(), new Vartotojas(vardas, slaptazodis, email, lytis, gimimoData));
+        System.out.println("Vartotojas sukurtas.");
     }
 
     private static void modifikuotiVartotoja() {
@@ -105,27 +122,27 @@ public class Main {
             switch (pasirinkimas) {
                 case 1 -> {
                     System.out.print("Iveskite varda: ");
-                    String vardas = in.next();
+                    String vardas = in.nextLine();
                     if (isNameValid(vardas))
                         vart.setVardas(vardas);
                 }
                 case 2 -> {
                     System.out.print("Iveskite slaptazodi: ");
-                    String slaptazodis = in.next();
+                    String slaptazodis = in.nextLine();
                     System.out.print("Iveskite slaptazodi(dar karta): ");
-                    String slaptazodis2 = in.next();
+                    String slaptazodis2 = in.nextLine();
                     if (isPassValid(slaptazodis, slaptazodis2))
                         vart.setSlaptazodis(slaptazodis);
                 }
                 case 3 -> {
                     System.out.print("Iveskite email: ");
-                    String email = in.next();
+                    String email = in.nextLine();
                     if (isEmailValid(email))
                         vart.setEmail(email);
                 }
                 case 4 -> {
                     System.out.print("Iveskite lyti: ");
-                    String lytisString = in.next();
+                    String lytisString = in.nextLine();
                     Lytis lytis;
 
                     try {
@@ -165,6 +182,12 @@ public class Main {
     }
 
     private static boolean isNameValid(String vardas) {
+
+        if (vardas.contains(" ")) {
+            System.out.println("Vardas negali turetu tarpu!");
+            return false;
+        }
+
         if (vardas.length() < 3) {
             System.out.println("Vartotojo vardas per trumpas!");
             return false;
@@ -174,6 +197,11 @@ public class Main {
     }
 
     private static boolean isPassValid(String slaptazodis, String slaptazodis2) {
+
+        if (slaptazodis.contains(" ") || slaptazodis2.contains(" ")) {
+            System.out.println("Slaptazodis negali turetu tarpu!");
+            return false;
+        }
 
         if (!slaptazodis.equals(slaptazodis2)) {
             System.out.println("Slaptazodziai nesutampa!");
@@ -185,8 +213,29 @@ public class Main {
 
     private static boolean isEmailValid(String email) {
 
+        if (email.contains(" ")) {
+            System.out.println("El. pastas negali turetu tarpu!");
+            return false;
+        }
+
         if (!email.contains("@")) {
             System.out.println("Neteisingas email formatas!");
+            return false;
+        }
+
+        return true;
+    }
+
+    private static boolean isDateOfBirthValid(String dateOfBirthString) {
+        LocalDate gimimoData;
+        try {
+            gimimoData = LocalDate.parse(dateOfBirthString, DATE_FORMATTER);
+        } catch (DateTimeParseException e) {
+            System.out.println("Blogas datos formatas!");
+            return false;
+        }
+        if (gimimoData.isAfter(LocalDate.now().minusYears(18))) {
+            System.out.println("Tau nera 18 metu!");
             return false;
         }
 
