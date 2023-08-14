@@ -295,13 +295,23 @@ public class Main {
 
     private static boolean isNameValid(String vardas) {
 
-        if (vardas.contains(" ")) {
-            System.out.println("Vardas negali turetu tarpu!");
+        if (vardas.length() < 3) {
+            System.out.println("Vartotojo vardas per trumpas!");
             return false;
         }
 
-        if (vardas.length() < 3) {
-            System.out.println("Vartotojo vardas per trumpas!");
+        if (vardas.length() > 15) {
+            System.out.println("Vartotojo vardas per ilgas!");
+            return false;
+        }
+
+        if (vardas.matches(".*[^A-Za-z].*")) {
+            System.out.println("Vardas turi netinkamų simbolių!");
+            return false;
+        }
+
+        if (!vardas.matches("[A-Z][a-z]+")) {
+            System.out.println("Vardas privalo prasidėti didžiąją raide ir toliau būti mažosiomis");
             return false;
         }
 
@@ -310,16 +320,26 @@ public class Main {
 
     private static boolean isPassValid(String slaptazodis, String slaptazodis2) {
 
-        if (slaptazodis.contains(" ") || slaptazodis2.contains(" ")) {
-            System.out.println("Slaptazodis negali turetu tarpu!");
-            return false;
-        }
-
         if (!slaptazodis.equals(slaptazodis2)) {
             System.out.println("Slaptazodziai nesutampa!");
             return false;
         }
 
+        if (slaptazodis.length() < 5) {
+            System.out.println("Slaptažodis per trumpas!");
+            return false;
+        }
+
+        if (slaptazodis.matches(".*\\W.*")) {
+            System.out.println("Slaptažodis turi neleidžiamų simbolių");
+            return false;
+        }
+
+        if (!slaptazodis.matches(".*[a-z].*") || !slaptazodis.matches(".*[A-Z].*") || !slaptazodis.matches(".*\\d.*")) {
+            System.out.println("Slaptažodis privalo turėti bent vieną didžiają raidę, mažąją raidę ir skaičių");
+            return false;
+        }
+        
         return true;
     }
 
@@ -330,7 +350,7 @@ public class Main {
             return false;
         }
 
-        if (!email.contains("@")) {
+        if (!email.matches("[a-z\\d_.]+@[a-z\\d]+\\.[a-z]{2,10}")) {
             System.out.println("Neteisingas email formatas!");
             return false;
         }
