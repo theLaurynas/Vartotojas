@@ -6,17 +6,17 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.HashMap;
 import java.util.InputMismatchException;
 import java.util.List;
 import java.util.Scanner;
+import java.util.TreeMap;
 
 public class Main {
     static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     static Scanner in = new Scanner(System.in);
 
-    static HashMap<Integer, Vartotojas> vartotojai = new HashMap<>();
+    static TreeMap<Integer, Vartotojas> vartotojai = new TreeMap<>();
 
     public static void main(String[] args) {
         int pasirinkimas;
@@ -65,13 +65,16 @@ public class Main {
         System.out.println("Programa baigia darba!");
     }
 
-    private static void ivestiVartotoja() {
+    private static String vardoIvestis() {
         String vardas;
         do {
             System.out.print("Iveskite varda: ");
             vardas = in.nextLine();
         } while (!isNameValid(vardas));
+        return vardas;
+    }
 
+    private static String slaptazodzioIvestis() {
         String slaptazodis;
         String slaptazodis2;
 
@@ -82,13 +85,19 @@ public class Main {
             System.out.print("Iveskite slaptazodi(dar karta): ");
             slaptazodis2 = in.nextLine();
         } while (!isPassValid(slaptazodis, slaptazodis2));
+        return slaptazodis;
+    }
 
+    private static String emailIvestis() {
         String email;
         do {
             System.out.print("Iveskite email: ");
             email = in.nextLine();
         } while (!isEmailValid(email));
+        return email;
+    }
 
+    private static Lytis lytiesIvestis() {
         System.out.print("Iveskite lyti: ");
         String lytisString = in.nextLine();
 
@@ -100,7 +109,10 @@ public class Main {
             System.out.println("Ivesta netinkama lytis, pritaikoma nezinoma!");
             lytis = Lytis.NEZINOMA;
         }
+        return lytis;
+    }
 
+    private static LocalDate gimimoDatosIvestis() {
         String gimimoDataString;
 
         do {
@@ -108,7 +120,15 @@ public class Main {
             gimimoDataString = in.next();
         } while (!isDateOfBirthValid(gimimoDataString));
 
-        LocalDate gimimoData = LocalDate.parse(gimimoDataString, DATE_FORMATTER);
+        return LocalDate.parse(gimimoDataString, DATE_FORMATTER);
+    }
+
+    private static void ivestiVartotoja() {
+        String vardas = vardoIvestis();
+        String slaptazodis = slaptazodzioIvestis();
+        String email = emailIvestis();
+        Lytis lytis = lytiesIvestis();
+        LocalDate gimimoData = gimimoDatosIvestis();
 
         vartotojai.put(Vartotojas.getIdCounter(), new Vartotojas(vardas, slaptazodis, email, lytis, gimimoData));
         System.out.println("Vartotojas sukurtas.");
@@ -135,40 +155,10 @@ public class Main {
             Vartotojas vart = vartotojai.get(keiciamasId);
 
             switch (pasirinkimas) {
-                case 1 -> {
-                    System.out.print("Iveskite varda: ");
-                    String vardas = in.nextLine();
-                    if (isNameValid(vardas))
-                        vart.setVardas(vardas);
-                }
-                case 2 -> {
-                    System.out.print("Iveskite slaptazodi: ");
-                    String slaptazodis = in.nextLine();
-                    System.out.print("Iveskite slaptazodi(dar karta): ");
-                    String slaptazodis2 = in.nextLine();
-                    if (isPassValid(slaptazodis, slaptazodis2))
-                        vart.setSlaptazodis(slaptazodis);
-                }
-                case 3 -> {
-                    System.out.print("Iveskite email: ");
-                    String email = in.nextLine();
-                    if (isEmailValid(email))
-                        vart.setEmail(email);
-                }
-                case 4 -> {
-                    System.out.print("Iveskite lyti: ");
-                    String lytisString = in.nextLine();
-                    Lytis lytis;
-
-                    try {
-                        lytis = stringToLytis(lytisString);
-                    } catch (NetinkamaLytisException e) {
-                        System.out.println("Ivesta netinkama lytis, pritaikoma nezinoma!");
-                        lytis = Lytis.NEZINOMA;
-                    }
-
-                    vart.setLytis(lytis);
-                }
+                case 1 -> vart.setVardas(vardoIvestis());
+                case 2 -> vart.setSlaptazodis(slaptazodzioIvestis());
+                case 3 -> vart.setEmail(emailIvestis());
+                case 4 -> vart.setLytis(lytiesIvestis());
                 default -> System.out.println("Blogas pasirinkimas!");
             }
 
