@@ -66,26 +66,28 @@ public class Main {
     }
 
     private static void ivestiVartotoja() {
-        System.out.print("Iveskite varda: ");
-        String vardas = in.nextLine();
-        if (!isNameValid(vardas)) {
-            return;
-        }
+        String vardas;
+        do {
+            System.out.print("Iveskite varda: ");
+            vardas = in.nextLine();
+        } while (!isNameValid(vardas));
 
-        System.out.print("Iveskite slaptazodi: ");
-        String slaptazodis = in.nextLine();
+        String slaptazodis;
+        String slaptazodis2;
 
-        System.out.print("Iveskite slaptazodi(dar karta): ");
-        String slaptazodis2 = in.nextLine();
-        if (!isPassValid(slaptazodis, slaptazodis2)) {
-            return;
-        }
+        do {
+            System.out.print("Iveskite slaptazodi: ");
+            slaptazodis = in.nextLine();
 
-        System.out.print("Iveskite email: ");
-        String email = in.nextLine();
-        if (!isEmailValid(email)) {
-            return;
-        }
+            System.out.print("Iveskite slaptazodi(dar karta): ");
+            slaptazodis2 = in.nextLine();
+        } while (!isPassValid(slaptazodis, slaptazodis2));
+
+        String email;
+        do {
+            System.out.print("Iveskite email: ");
+            email = in.nextLine();
+        } while (!isEmailValid(email));
 
         System.out.print("Iveskite lyti: ");
         String lytisString = in.nextLine();
@@ -99,12 +101,12 @@ public class Main {
             lytis = Lytis.NEZINOMA;
         }
 
-        System.out.print("Iveskite gimimo data(yyyy-MM-dd): ");
-        String gimimoDataString = in.next();
+        String gimimoDataString;
 
-        if (!isDateOfBirthValid(gimimoDataString)) {
-            return;
-        }
+        do {
+            System.out.print("Iveskite gimimo data(yyyy-MM-dd): ");
+            gimimoDataString = in.next();
+        } while (!isDateOfBirthValid(gimimoDataString));
 
         LocalDate gimimoData = LocalDate.parse(gimimoDataString, DATE_FORMATTER);
 
@@ -339,7 +341,7 @@ public class Main {
             System.out.println("Slaptažodis privalo turėti bent vieną didžiają raidę, mažąją raidę ir skaičių");
             return false;
         }
-        
+
         return true;
     }
 
