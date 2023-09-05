@@ -2,6 +2,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
+import java.sql.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -18,10 +19,23 @@ public class Main {
 
     static TreeMap<Integer, Vartotojas> vartotojai = new TreeMap<>();
 
+    private static Connection conn;
+
+    public static void connectToDB() {
+        try {
+            conn = DriverManager.getConnection("jdbc:postgresql://127.0.0.1/mano",
+                    "postgres", "root");
+        } catch (SQLException e) {
+            System.err.println("Nepavyko prisijungti prie duomenu bazes!");
+            System.exit(1);
+        }
+    }
+
     public static void main(String[] args) {
         int pasirinkimas;
 
         uzkrautiVartotojus();
+        connectToDB();
 
         menu:
         while (true) {
@@ -62,6 +76,10 @@ public class Main {
         }
         issaugotiVartotojus();
         in.close();
+        try {
+            conn.close();
+        } catch (SQLException e) {
+        }
         System.out.println("Programa baigia darba!");
     }
 
@@ -211,9 +229,37 @@ public class Main {
     }
 
     private static void isvestiIEkrana() {
+
+        try {
+            Statement stat = conn.createStatement();
+            ResultSet rs = stat.executeQuery("""
+                    SELECT *
+                    FROM vartotojai""");
+
+            while (rs.next()) {
+                int id = rs.getInt("id");
+                String vardas = rs.getString("vardas");
+                String slaptazodis = rs.getString("slaptazodis");
+                String email = rs.getString("email");
+                String lytis = rs.getString("lytis");
+                LocalDate gimimoData = rs.getDate("gimimo_data").toLocalDate();
+                LocalDateTime registracijosData = rs.getTimestamp("registracijos_data").toLocalDateTime();
+
+
+                System.out.printf("%d | %s | %s | %s | %s | %s | %s\n",
+                        id, vardas, slaptazodis, email, lytis,
+                        gimimoData.format(DateTimeFormatter.ISO_DATE),
+                        registracijosData.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+            }
+        } catch (SQLException ignored) {
+            System.err.println("Nepavyko gauti vartotoju is duomenu bazes!");
+        }
+
+
         for (var v : vartotojai.values()) {
             System.out.println(v);
         }
+
     }
 
     private static void issaugotiIFaila() {
