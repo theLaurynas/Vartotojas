@@ -6,14 +6,11 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.InputMismatchException;
 import java.util.Scanner;
-import java.util.TreeMap;
 
 import static lt.codeacademy.vartotojas.Ivestis.*;
 
 public class Main {
     static Scanner in = new Scanner(System.in);
-
-    static TreeMap<Integer, Vartotojas> vartotojai = new TreeMap<>();
 
     private static Connection conn;
     private static PreparedStatement addUserStatement;
@@ -108,37 +105,43 @@ public class Main {
     }
 
     private static void modifikuotiVartotoja() {
-        System.out.println("Paskutinis ivestas vartotojas yra indeksu " + (vartotojai.size() - 1));
+        isvestiIEkrana(); // Galima nieko neisvesti jei daug vartotoju.
         System.out.print("Kuri vartotoja norite keisti: ");
         int keiciamasId = in.nextInt();
-        if (vartotojai.containsKey(keiciamasId)) {
-            System.out.print("""
-                    1 - vardas
-                    2 - slaptazodis
-                    3 - email
-                    4 - lytis
-                    Kuri lauka norite keisti:\s""");
-            int pasirinkimas;
-            try {
-                pasirinkimas = in.nextInt();
-            } catch (InputMismatchException e) {
-                pasirinkimas = -1;
-            }
-            in.nextLine();
-            Vartotojas vart = vartotojai.get(keiciamasId);
+        in.nextLine();
 
-            switch (pasirinkimas) {
-                case 1 -> vart.setVardas(Ivestis.vardoIvestis());
-                case 2 -> vart.setSlaptazodis(Ivestis.slaptazodzioIvestis());
-                case 3 -> vart.setEmail(Ivestis.emailIvestis());
-                case 4 -> vart.setLytis(Ivestis.lytiesIvestis());
-                default -> System.out.println("Blogas pasirinkimas!");
-            }
+        try {
+            Statement stat = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
+            ResultSet rs = stat.executeQuery("SELECT * FROM vartotojai WHERE id = " + keiciamasId);
+            cond:
+            if (rs.next()) {
+                System.out.print("""
+                        1 - vardas
+                        2 - slaptazodis
+                        3 - email
+                        4 - lytis
+                        Kuri lauka norite keisti:\s""");
+                String pasirinkimas = in.nextLine();
 
-            System.out.println("lt.codeacademy.vartotojas.Vartotojas pakoreguotas.");
-        } else {
-            System.out.println("indeksas " + keiciamasId + " nerastas");
+                switch (pasirinkimas) {
+                    case "1" -> rs.updateString("vardas", Ivestis.vardoIvestis());
+                    case "2" -> rs.updateString("slaptazodis", Ivestis.slaptazodzioIvestis());
+                    case "3" -> rs.updateString("email", Ivestis.emailIvestis());
+                    case "4" -> rs.updateString("lytis", Ivestis.lytiesIvestis());
+                    default -> {
+                        System.out.println("Blogas pasirinkimas!");
+                        break cond;
+                    }
+                }
+                rs.updateRow();
+                System.out.println("lt.codeacademy.vartotojas.Vartotojas pakoreguotas.");
+            } else {
+                System.out.println("indeksas " + keiciamasId + " nerastas");
+            }
+        } catch (SQLException e) {
+            System.err.println("Ivyko duomenu bazes klaida!");
         }
+
     }
 
     private static void trintiVartotoja() {
@@ -193,7 +196,8 @@ public class Main {
             Statement stat = conn.createStatement();
             ResultSet rs = stat.executeQuery("""
                     SELECT *
-                    FROM vartotojai""");
+                    FROM vartotojai
+                    ORDER BY id""");
 
             while (rs.next()) {
                 int id = rs.getInt("id");
