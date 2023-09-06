@@ -1,3 +1,5 @@
+package lt.codeacademy.vartotojas;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -46,7 +48,7 @@ public class Vartotojas {
 
     public String toCsv() {
         return String.format("%d,%s,%s,%s,%s,%s,%s",
-                id, vardas, slaptazodis, email, lytis, gimimoData, regData.format(Main.DATE_TIME_FORMATTER));
+                id, vardas, slaptazodis, email, lytis, gimimoData, regData.format(Ivestis.DATE_TIME_FORMATTER));
     }
 
     @Override
@@ -54,7 +56,7 @@ public class Vartotojas {
         return String.format("""
                         Id: %d | Vardas: %s | Slaptazodis: %s | Email: %s | Lytis: %s
                         \tReg. data: %s | Gimimo data: %s""",
-                id, vardas, slaptazodis, email, lytis, regData.format(Main.DATE_TIME_FORMATTER), gimimoData);
+                id, vardas, slaptazodis, email, lytis, regData.format(Ivestis.DATE_TIME_FORMATTER), gimimoData);
     }
 
     //<editor-fold desc="Getters/Setters">
