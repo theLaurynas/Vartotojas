@@ -9,10 +9,10 @@ public class Vartotojas {
     private String vardas;
     private String slaptazodis;
     private String email;
-    private Lytis lytis;
+    private String lytis;
 
 
-    public Vartotojas(String vardas, String slaptazodis, String email, Lytis lytis, LocalDate gimimoData) {
+    public Vartotojas(String vardas, String slaptazodis, String email, String lytis, LocalDate gimimoData) {
         this.id = idCounter++;
         this.vardas = vardas;
         this.slaptazodis = slaptazodis;
@@ -22,7 +22,7 @@ public class Vartotojas {
         this.regData = LocalDateTime.now();
     }
 
-    public Vartotojas(int id, String vardas, String slaptazodis, String email, Lytis lytis, LocalDate gimimoData, LocalDateTime regData) {
+    public Vartotojas(int id, String vardas, String slaptazodis, String email, String lytis, LocalDate gimimoData, LocalDateTime regData) {
         this.id = id;
         this.vardas = vardas;
         this.slaptazodis = slaptazodis;
@@ -38,6 +38,10 @@ public class Vartotojas {
 
     public static void setIdCounter(int idCounter) {
         Vartotojas.idCounter = idCounter;
+    }
+
+    public static int getAndIncrIdCounter() {
+        return idCounter++;
     }
 
     public String toCsv() {
@@ -94,11 +98,11 @@ public class Vartotojas {
         this.email = email;
     }
 
-    public Lytis getLytis() {
+    public String getLytis() {
         return lytis;
     }
 
-    public void setLytis(Lytis lytis) {
+    public void setLytis(String lytis) {
         this.lytis = lytis;
     }
     //</editor-fold>

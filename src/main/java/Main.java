@@ -15,6 +15,7 @@ public class Main {
     static TreeMap<Integer, Vartotojas> vartotojai = new TreeMap<>();
 
     private static Connection conn;
+    private static PreparedStatement addUserStatement;
 
     public static void connectToDB() {
         try {
@@ -29,6 +30,18 @@ public class Main {
     public static void main(String[] args) {
         int pasirinkimas;
         connectToDB();
+
+        try {
+            ResultSet rs = conn.createStatement().executeQuery("SELECT COALESCE(MAX(id), 0) FROM vartotojai");
+            rs.next();
+            int maxId = rs.getInt(1);
+            Vartotojas.setIdCounter(maxId + 1);
+            addUserStatement = conn.prepareStatement("INSERT INTO vartotojai VALUES(?,?,?,?,?,?,?);");
+        } catch (SQLException e) {
+            System.out.println("Duombazes klaida!");
+            System.exit(1);
+        }
+
 
         menu:
         while (true) {
@@ -103,19 +116,10 @@ public class Main {
         return email;
     }
 
-    private static Lytis lytiesIvestis() {
+    private static String lytiesIvestis() {
         System.out.print("Iveskite lyti: ");
-        String lytisString = in.nextLine();
-
-        Lytis lytis;
-
-        try {
-            lytis = stringToLytis(lytisString);
-        } catch (NetinkamaLytisException e) {
-            System.out.println("Ivesta netinkama lytis, pritaikoma nezinoma!");
-            lytis = Lytis.NEZINOMA;
-        }
-        return lytis;
+        String lytis = in.nextLine().toUpperCase();
+        return lytis.equals("VYRAS") || lytis.equals("MOTERIS") ? lytis : "NEZINOMA";
     }
 
     private static LocalDate gimimoDatosIvestis() {
@@ -133,11 +137,22 @@ public class Main {
         String vardas = vardoIvestis();
         String slaptazodis = slaptazodzioIvestis();
         String email = emailIvestis();
-        Lytis lytis = lytiesIvestis();
+        String lytis = lytiesIvestis();
         LocalDate gimimoData = gimimoDatosIvestis();
 
-        vartotojai.put(Vartotojas.getIdCounter(), new Vartotojas(vardas, slaptazodis, email, lytis, gimimoData));
-        System.out.println("Vartotojas sukurtas.");
+        try {
+            addUserStatement.setInt(1, Vartotojas.getAndIncrIdCounter());
+            addUserStatement.setString(2, vardas);
+            addUserStatement.setString(3, slaptazodis);
+            addUserStatement.setString(4, email);
+            addUserStatement.setString(5, lytis);
+            addUserStatement.setDate(6, Date.valueOf(gimimoData));
+            addUserStatement.setTimestamp(7, Timestamp.valueOf(LocalDateTime.now()));
+            addUserStatement.execute();
+            System.out.println("Vartotojas sukurtas.");
+        } catch (SQLException e) {
+            System.err.println("Vartotojo sukurti nepavyko!");
+        }
     }
 
     private static void modifikuotiVartotoja() {
