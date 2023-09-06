@@ -142,14 +142,21 @@ public class Main {
     }
 
     private static void trintiVartotoja() {
-        System.out.println("Paskutinis ivestas vartotojas yra indeksu " + (vartotojai.size() - 1));
+        isvestiIEkrana(); // Galima nieko neisvesti jei daug vartotoju.
         System.out.print("Kuri vartotoja norite istrinti: ");
-        int trinamasId = in.nextInt();
-        if (vartotojai.containsKey(trinamasId)) {
-            vartotojai.remove(trinamasId);
-            System.out.println("lt.codeacademy.vartotojas.Vartotojas istrintas.");
-        } else {
-            System.out.println("indeksas " + trinamasId + " nerastas");
+        try {
+            int trinamasId = in.nextInt();
+            Statement stat = conn.createStatement();
+            boolean wasDeleted = stat.executeUpdate("DELETE FROM vartotojai WHERE id = " + trinamasId) != 0;
+
+            if (wasDeleted)
+                System.out.println("Vartotojas istrintas");
+            else
+                System.out.printf("Vartotojas su id %d nerastas\n", trinamasId);
+        } catch (SQLException e) {
+            System.err.println("Ivyko duombazes klaida!");
+        } catch (InputMismatchException e) {
+            System.err.println("Blogai nurodytas id!");
         }
     }
 
