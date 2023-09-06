@@ -1,5 +1,7 @@
 package lt.codeacademy.vartotojas;
 
+import org.apache.commons.codec.digest.DigestUtils;
+
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -31,6 +33,7 @@ public class Ivestis {
             System.out.print("Iveskite slaptazodi(dar karta): ");
             slaptazodis2 = in.nextLine();
         } while (!isPassValid(slaptazodis, slaptazodis2));
+        slaptazodis = DigestUtils.sha1Hex(slaptazodis);
         return slaptazodis;
     }
 
