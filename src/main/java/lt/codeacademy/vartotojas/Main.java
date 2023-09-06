@@ -1,5 +1,9 @@
 package lt.codeacademy.vartotojas;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
 import java.sql.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -32,9 +36,9 @@ public class Main {
         try {
             ResultSet rs = conn.createStatement().executeQuery("SELECT COALESCE(MAX(id), 0) FROM vartotojai");
             rs.next();
-            int maxId = rs.getInt(1);
-            Vartotojas.setIdCounter(maxId + 1);
-            addUserStatement = conn.prepareStatement("INSERT INTO vartotojai VALUES(?,?,?,?,?,?,?);");
+            addUserStatement = conn.prepareStatement("""
+                    INSERT INTO vartotojai(vardas, slaptazodis, email, lytis, gimimo_data, registracijos_data)
+                    VALUES(?,?,?,?,?,?);""");
         } catch (SQLException e) {
             System.out.println("Duombazes klaida!");
             System.exit(1);
@@ -67,7 +71,7 @@ public class Main {
                 case 1 -> ivestiVartotoja();
                 case 2 -> modifikuotiVartotoja();
                 case 3 -> trintiVartotoja();
-                case 4 -> spausdintiVartotojus();
+                case 4 -> spausdintiVartotojus(true);
                 case 5 -> {
                     break menu;
                 }
@@ -90,22 +94,21 @@ public class Main {
         LocalDate gimimoData = gimimoDatosIvestis();
 
         try {
-            addUserStatement.setInt(1, Vartotojas.getAndIncrIdCounter());
-            addUserStatement.setString(2, vardas);
-            addUserStatement.setString(3, slaptazodis);
-            addUserStatement.setString(4, email);
-            addUserStatement.setString(5, lytis);
-            addUserStatement.setDate(6, Date.valueOf(gimimoData));
-            addUserStatement.setTimestamp(7, Timestamp.valueOf(LocalDateTime.now()));
+            addUserStatement.setString(1, vardas);
+            addUserStatement.setString(2, slaptazodis);
+            addUserStatement.setString(3, email);
+            addUserStatement.setString(4, lytis);
+            addUserStatement.setDate(5, Date.valueOf(gimimoData));
+            addUserStatement.setTimestamp(6, Timestamp.valueOf(LocalDateTime.now()));
             addUserStatement.execute();
-            System.out.println("lt.codeacademy.vartotojas.Vartotojas sukurtas.");
+            System.out.println("Vartotojas sukurtas.");
         } catch (SQLException e) {
             System.err.println("Vartotojo sukurti nepavyko!");
         }
     }
 
     private static void modifikuotiVartotoja() {
-        isvestiIEkrana(); // Galima nieko neisvesti jei daug vartotoju.
+        spausdintiVartotojus(false); // Galima nieko neisvesti jei daug vartotoju.
         System.out.print("Kuri vartotoja norite keisti: ");
         int keiciamasId = in.nextInt();
         in.nextLine();
@@ -134,7 +137,7 @@ public class Main {
                     }
                 }
                 rs.updateRow();
-                System.out.println("lt.codeacademy.vartotojas.Vartotojas pakoreguotas.");
+                System.out.println("Vartotojas pakoreguotas.");
             } else {
                 System.out.println("indeksas " + keiciamasId + " nerastas");
             }
@@ -145,7 +148,7 @@ public class Main {
     }
 
     private static void trintiVartotoja() {
-        isvestiIEkrana(); // Galima nieko neisvesti jei daug vartotoju.
+        spausdintiVartotojus(false); // Galima nieko neisvesti jei daug vartotoju.
         System.out.print("Kuri vartotoja norite istrinti: ");
         try {
             int trinamasId = in.nextInt();
@@ -160,37 +163,33 @@ public class Main {
             System.err.println("Ivyko duombazes klaida!");
         } catch (InputMismatchException e) {
             System.err.println("Blogai nurodytas id!");
+        } finally {
+            in.nextLine();
         }
     }
 
-    private static void spausdintiVartotojus() {
+    private static void spausdintiVartotojus(boolean menu) {
         //TODO Prideti tikrinima ar yra vartotoju duomenu bazeje.
 
-        int pasirinkimas;
-        System.out.print("""
-                Kur norite isvesti vartotojus
-                1 - I ekrana
-                2 - I faila
-                3 - I ekrana ir i faila
-                Jusu pasirinkimas:\s""");
-        try {
-            pasirinkimas = in.nextInt();
-        } catch (InputMismatchException e) {
-            pasirinkimas = -1;
-        }
-        in.nextLine();
-        switch (pasirinkimas) {
-            case 1 -> isvestiIEkrana();
-            case 2 -> issaugotiIFaila();
-            case 3 -> {
-                isvestiIEkrana();
-                issaugotiIFaila();
-            }
-            default -> System.out.println("Blogas pasirinkimas!");
-        }
-    }
+        String pasirinkimas = "1";
 
-    private static void isvestiIEkrana() {
+        if (menu) {
+            System.out.print("""
+                    Kur norite isvesti vartotojus
+                    1 - I ekrana
+                    2 - I faila
+                    3 - I ekrana ir i faila
+                    Jusu pasirinkimas:\s""");
+            pasirinkimas = in.nextLine();
+        }
+
+
+        if (!pasirinkimas.equals("1") && !pasirinkimas.equals("2") && !pasirinkimas.equals("3")) {
+            System.out.println("Blogas pasirinkimas!");
+            return;
+        }
+
+        StringBuilder sb = new StringBuilder();
 
         try {
             Statement stat = conn.createStatement();
@@ -205,38 +204,42 @@ public class Main {
                 String slaptazodis = rs.getString("slaptazodis");
                 String email = rs.getString("email");
                 String lytis = rs.getString("lytis");
-                LocalDate gimimoData = rs.getDate("gimimo_data").toLocalDate();
-                LocalDateTime registracijosData = rs.getTimestamp("registracijos_data").toLocalDateTime();
+                String gimimoData = rs.getDate("gimimo_data").toLocalDate()
+                        .format(DateTimeFormatter.ISO_DATE);
+                String registracijosData = rs.getTimestamp("registracijos_data").toLocalDateTime()
+                        .format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
 
-
-                System.out.printf("%d | %s | %s | %s | %s | %s | %s\n",
+                sb.append(String.format("%d | %s | %s | %s | %s | %s | %s\n",
                         id, vardas, slaptazodis, email, lytis,
-                        gimimoData.format(DateTimeFormatter.ISO_DATE),
-                        registracijosData.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+                        gimimoData, registracijosData
+                ));
             }
         } catch (SQLException ignored) {
             System.err.println("Nepavyko gauti vartotoju is duomenu bazes!");
         }
+
+        String text = sb.toString();
+
+        switch (pasirinkimas) {
+            case "1" -> System.out.print(text);
+            case "2" -> issaugotiIFaila(text);
+            case "3" -> {
+                System.out.print(text);
+                issaugotiIFaila(text);
+            }
+        }
     }
 
-    private static void issaugotiIFaila() {
-
-        throw new RuntimeException("Reikia perdaryti, neveikia su db!");
-
-        /*DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy_MM_dd-HH_mm_ss");
+    private static void issaugotiIFaila(String text) {
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy_MM_dd-HH_mm_ss");
         String filename = "vartotojai_" + LocalDateTime.now().format(dtf) + ".txt";
         File file = new File(filename);
-        StringBuilder sb = new StringBuilder();
-
-        for (var v : vartotojai.values()) {
-            sb.append(v).append("\n");
-        }
 
         try {
-            Files.writeString(file.toPath(), sb, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
+            Files.writeString(file.toPath(), text, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
             System.out.println("Failas issaugotas vardu: " + filename);
         } catch (IOException e) {
             System.out.println("Failo issaugoti nepavyko!");
-        }*/
+        }
     }
 }
