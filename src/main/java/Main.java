@@ -1,14 +1,9 @@
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.StandardOpenOption;
 import java.sql.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.InputMismatchException;
-import java.util.List;
 import java.util.Scanner;
 import java.util.TreeMap;
 
@@ -33,8 +28,6 @@ public class Main {
 
     public static void main(String[] args) {
         int pasirinkimas;
-
-        uzkrautiVartotojus();
         connectToDB();
 
         menu:
@@ -48,9 +41,7 @@ public class Main {
                     │ 2 - Pakeisti esama vartotoja     │
                     │ 3 - Trinti vartotoja             │
                     │ 4 - Atspausdinti vartotojus      │
-                    │ 5 - Uzkrauti vartotojus is failo │
-                    │ 6 - Issaugoti vartotojus i faila │
-                    │ 7 - Baigti programa              │
+                    │ 5 - Baigti programa              │
                     └──────────────────────────────────┘
                       Jusu pasirinkimas:\s""");
 
@@ -66,15 +57,12 @@ public class Main {
                 case 2 -> modifikuotiVartotoja();
                 case 3 -> trintiVartotoja();
                 case 4 -> spausdintiVartotojus();
-                case 5 -> uzkrautiVartotojus();
-                case 6 -> issaugotiVartotojus();
-                case 7 -> {
+                case 5 -> {
                     break menu;
                 }
                 default -> System.out.println("Blogas pasirinkimas!");
             }
         }
-        issaugotiVartotojus();
         in.close();
         try {
             conn.close();
@@ -199,10 +187,7 @@ public class Main {
     }
 
     private static void spausdintiVartotojus() {
-        if (vartotojai.isEmpty()) {
-            System.out.println("Nera ne vieno vartotojo!");
-            return;
-        }
+        //TODO Prideti tikrinima ar yra vartotoju duomenu bazeje.
 
         int pasirinkimas;
         System.out.print("""
@@ -254,16 +239,13 @@ public class Main {
         } catch (SQLException ignored) {
             System.err.println("Nepavyko gauti vartotoju is duomenu bazes!");
         }
-
-
-        for (var v : vartotojai.values()) {
-            System.out.println(v);
-        }
-
     }
 
     private static void issaugotiIFaila() {
-        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy_MM_dd-HH_mm_ss");
+
+        throw new RuntimeException("Reikia perdaryti, neveikia su db!");
+
+        /*DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy_MM_dd-HH_mm_ss");
         String filename = "vartotojai_" + LocalDateTime.now().format(dtf) + ".txt";
         File file = new File(filename);
         StringBuilder sb = new StringBuilder();
@@ -277,58 +259,7 @@ public class Main {
             System.out.println("Failas issaugotas vardu: " + filename);
         } catch (IOException e) {
             System.out.println("Failo issaugoti nepavyko!");
-        }
-    }
-
-    private static void uzkrautiVartotojus() {
-        int maxId = 0;
-        try {
-            List<String> vartotojaiList = Files.readAllLines(new File("vartotojai.txt").toPath());
-            for (String x : vartotojaiList) {
-                String[] vartStr = x.split(",");
-                int id = Integer.parseInt(vartStr[0]);
-                String vardas = vartStr[1];
-                String slaptazodis = vartStr[2];
-                String email = vartStr[3];
-                Lytis lytis;
-                try {
-                    lytis = stringToLytis(vartStr[4]);
-                } catch (NetinkamaLytisException e) {
-                    System.out.println("Ivesta netinkama lytis, pritaikoma nezinoma!");
-                    lytis = Lytis.NEZINOMA;
-                }
-
-                LocalDate gimimoData = LocalDate.parse(vartStr[5], DATE_FORMATTER);
-                LocalDateTime regData = LocalDateTime.parse(vartStr[6], DATE_TIME_FORMATTER);
-
-                Vartotojas vart = new Vartotojas(id, vardas, slaptazodis, email, lytis, gimimoData, regData);
-                vartotojai.put(id, vart);
-
-                maxId = Math.max(maxId, id);
-            }
-            Vartotojas.setIdCounter(maxId + 1);
-            System.out.println("Vartotojai uzkrauti is failo.");
-        } catch (IOException e) {
-            System.out.println("Vartotoju is failo uzkrauti nepavyko!");
-        }
-
-    }
-
-    private static void issaugotiVartotojus() {
-        String filename = "vartotojai.txt";
-        File file = new File(filename);
-        StringBuilder sb = new StringBuilder();
-
-        for (var v : vartotojai.values()) {
-            sb.append(v.toCsv()).append("\n");
-        }
-
-        try {
-            Files.writeString(file.toPath(), sb, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
-            System.out.println("Failas issaugotas vardu: " + filename);
-        } catch (IOException e) {
-            System.out.println("Failo issaugoti nepavyko!");
-        }
+        }*/
     }
 
     private static boolean isNameValid(String vardas) {
