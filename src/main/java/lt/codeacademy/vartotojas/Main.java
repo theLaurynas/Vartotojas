@@ -1,5 +1,9 @@
 package lt.codeacademy.vartotojas;
 
+import com.mongodb.MongoClient;
+import com.mongodb.client.MongoCollection;
+import org.bson.Document;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -7,9 +11,12 @@ import java.nio.file.StandardOpenOption;
 import java.sql.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.InputMismatchException;
 import java.util.Scanner;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import static lt.codeacademy.vartotojas.Ivestis.*;
 
@@ -17,33 +24,18 @@ public class Main {
     static Scanner in = new Scanner(System.in);
 
     private static Connection conn;
+    private static MongoClient client;
     private static PreparedStatement addUserStatement;
 
     public static void connectToDB() {
-        try {
-            conn = DriverManager.getConnection("jdbc:postgresql://127.0.0.1/mano",
-                    "postgres", "root");
-        } catch (SQLException e) {
-            System.err.println("Nepavyko prisijungti prie duomenu bazes!");
-            System.exit(1);
-        }
+        Logger.getLogger("org.mongodb.driver")
+                .setLevel(Level.WARNING);
+        client = new MongoClient();
     }
 
     public static void main(String[] args) {
         int pasirinkimas;
         connectToDB();
-
-        try {
-            ResultSet rs = conn.createStatement().executeQuery("SELECT COALESCE(MAX(id), 0) FROM vartotojai");
-            rs.next();
-            addUserStatement = conn.prepareStatement("""
-                    INSERT INTO vartotojai(vardas, slaptazodis, email, lytis, gimimo_data, registracijos_data)
-                    VALUES(?,?,?,?,?,?);""");
-        } catch (SQLException e) {
-            System.out.println("Duombazes klaida!");
-            System.exit(1);
-        }
-
 
         menu:
         while (true) {
@@ -191,31 +183,27 @@ public class Main {
 
         StringBuilder sb = new StringBuilder();
 
-        try {
-            Statement stat = conn.createStatement();
-            ResultSet rs = stat.executeQuery("""
-                    SELECT *
-                    FROM vartotojai
-                    ORDER BY id""");
+        MongoCollection<Document> collection = client.getDatabase("mano")
+                .getCollection("vartotojai");
+        
 
-            while (rs.next()) {
-                int id = rs.getInt("id");
-                String vardas = rs.getString("vardas");
-                String slaptazodis = rs.getString("slaptazodis");
-                String email = rs.getString("email");
-                String lytis = rs.getString("lytis");
-                String gimimoData = rs.getDate("gimimo_data").toLocalDate()
-                        .format(DateTimeFormatter.ISO_DATE);
-                String registracijosData = rs.getTimestamp("registracijos_data").toLocalDateTime()
-                        .format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        for (Document doc : collection.find()) {
+            String id = doc.getObjectId("_id").toHexString();
+            String vardas = doc.getString("vardas");
+            String slaptazodis = doc.getString("slaptazodis");
+            String email = doc.getString("email");
+            String lytis = doc.getString("lytis");
 
-                sb.append(String.format("%d | %s | %s | %s | %s | %s | %s\n",
-                        id, vardas, slaptazodis, email, lytis,
-                        gimimoData, registracijosData
-                ));
-            }
-        } catch (SQLException ignored) {
-            System.err.println("Nepavyko gauti vartotoju is duomenu bazes!");
+            String gimimoData = LocalDate.ofInstant(doc.getDate("gimimo_data").toInstant(), ZoneId.systemDefault())
+                    .format(DateTimeFormatter.ISO_DATE);
+
+            String registracijosData = LocalDateTime.ofInstant(doc.getDate("registracijos_data").toInstant(), ZoneId.systemDefault())
+                    .format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+
+            sb.append(String.format("%s | %s | %s | %s | %s | %s | %s\n",
+                    id, vardas, slaptazodis, email, lytis,
+                    gimimoData, registracijosData
+            ));
         }
 
         String text = sb.toString();
