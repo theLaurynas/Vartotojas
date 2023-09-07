@@ -85,18 +85,20 @@ public class Main {
         String lytis = lytiesIvestis();
         LocalDate gimimoData = gimimoDatosIvestis();
 
-        try {
-            addUserStatement.setString(1, vardas);
-            addUserStatement.setString(2, slaptazodis);
-            addUserStatement.setString(3, email);
-            addUserStatement.setString(4, lytis);
-            addUserStatement.setDate(5, Date.valueOf(gimimoData));
-            addUserStatement.setTimestamp(6, Timestamp.valueOf(LocalDateTime.now()));
-            addUserStatement.execute();
-            System.out.println("Vartotojas sukurtas.");
-        } catch (SQLException e) {
-            System.err.println("Vartotojo sukurti nepavyko!");
-        }
+        MongoCollection<Document> collection = client.getDatabase("mano")
+                .getCollection("vartotojai");
+
+        Document doc = new Document()
+                .append("vardas", vardas)
+                .append("slaptazodis", slaptazodis)
+                .append("email", email)
+                .append("lytis", lytis)
+                .append("gimimo_data", gimimoData)
+                .append("registracijos_data", LocalDateTime.now());
+
+        collection.insertOne(doc);
+
+        System.out.println("Vartotojas sukurtas.");
     }
 
     private static void modifikuotiVartotoja() {
