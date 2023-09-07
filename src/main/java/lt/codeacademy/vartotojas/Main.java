@@ -185,7 +185,7 @@ public class Main {
 
         MongoCollection<Document> collection = client.getDatabase("mano")
                 .getCollection("vartotojai");
-        
+
 
         for (Document doc : collection.find()) {
             String id = doc.getObjectId("_id").toHexString();
@@ -194,10 +194,10 @@ public class Main {
             String email = doc.getString("email");
             String lytis = doc.getString("lytis");
 
-            String gimimoData = LocalDate.ofInstant(doc.getDate("gimimo_data").toInstant(), ZoneId.systemDefault())
+            String gimimoData = LocalDate.ofInstant(doc.getDate("gimimo_data").toInstant(), ZoneId.of("UTC"))
                     .format(DateTimeFormatter.ISO_DATE);
 
-            String registracijosData = LocalDateTime.ofInstant(doc.getDate("registracijos_data").toInstant(), ZoneId.systemDefault())
+            String registracijosData = LocalDateTime.ofInstant(doc.getDate("registracijos_data").toInstant(), ZoneId.of("UTC"))
                     .format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
 
             sb.append(String.format("%s | %s | %s | %s | %s | %s | %s\n",
