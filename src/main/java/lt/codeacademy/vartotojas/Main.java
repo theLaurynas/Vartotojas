@@ -2,7 +2,9 @@ package lt.codeacademy.vartotojas;
 
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.Updates;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 
@@ -10,16 +12,13 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.InputMismatchException;
+import java.util.Optional;
 import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -28,17 +27,15 @@ import static lt.codeacademy.vartotojas.Ivestis.*;
 
 public class Main {
     static Scanner in = new Scanner(System.in);
-    private static MongoClient client;
-
-    public static void connectToDB() {
-        Logger.getLogger("org.mongodb.driver")
-                .setLevel(Level.WARNING);
-        client = new MongoClient();
-    }
 
     public static void main(String[] args) {
+        Logger.getLogger("org.mongodb.driver")
+                .setLevel(Level.WARNING);
+
+        MongoClient client = new MongoClient();
+        MongoDatabase db = client.getDatabase("mano");
+
         int pasirinkimas;
-        connectToDB();
 
         menu:
         while (true) {
@@ -63,29 +60,30 @@ public class Main {
 
             in.nextLine();
             switch (pasirinkimas) {
-                case 1 -> ivestiVartotoja();
-                case 2 -> modifikuotiVartotoja();
-                case 3 -> trintiVartotoja();
-                case 4 -> spausdintiVartotojus(true);
+                case 1 -> ivestiVartotoja(db);
+                case 2 -> modifikuotiVartotoja(db);
+                case 3 -> trintiVartotoja(db);
+                case 4 -> spausdintiVartotojus(db, true);
                 case 5 -> {
                     break menu;
                 }
                 default -> System.out.println("Blogas pasirinkimas!");
             }
         }
+
+        client.close();
         in.close();
         System.out.println("Programa baigia darba!");
     }
 
-    private static void ivestiVartotoja() {
+    private static void ivestiVartotoja(MongoDatabase db) {
         String vardas = vardoIvestis();
         String slaptazodis = slaptazodzioIvestis();
         String email = emailIvestis();
         String lytis = lytiesIvestis();
         LocalDate gimimoData = gimimoDatosIvestis();
 
-        MongoCollection<Document> collection = client.getDatabase("mano")
-                .getCollection("vartotojai");
+        MongoCollection<Document> collection = db.getCollection("vartotojai");
 
         Document doc = new Document()
                 .append("vardas", vardas)
@@ -100,79 +98,85 @@ public class Main {
         System.out.println("Vartotojas sukurtas.");
     }
 
-    private static void modifikuotiVartotoja() {
-        spausdintiVartotojus(false); // Galima nieko neisvesti jei daug vartotoju.
+    private static void modifikuotiVartotoja(MongoDatabase db) {
+        spausdintiVartotojus(db, false); // Galima nieko neisvesti jei daug vartotoju.
+        MongoCollection<Document> collection = db.getCollection("vartotojai");
         System.out.print("Kuri vartotoja norite keisti: ");
-        int keiciamasId = in.nextInt();
-        in.nextLine();
-
+        int keiciamasId;
         try {
-            Connection conn = null; // Added so code compiles!
-            Statement stat = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
-            ResultSet rs = stat.executeQuery("SELECT * FROM vartotojai WHERE id = " + keiciamasId);
-            cond:
-            if (rs.next()) {
-                System.out.print("""
-                        1 - vardas
-                        2 - slaptazodis
-                        3 - email
-                        4 - lytis
-                        Kuri lauka norite keisti:\s""");
-                String pasirinkimas = in.nextLine();
-
-                switch (pasirinkimas) {
-                    case "1" -> rs.updateString("vardas", Ivestis.vardoIvestis());
-                    case "2" -> rs.updateString("slaptazodis", Ivestis.slaptazodzioIvestis());
-                    case "3" -> rs.updateString("email", Ivestis.emailIvestis());
-                    case "4" -> rs.updateString("lytis", Ivestis.lytiesIvestis());
-                    default -> {
-                        System.out.println("Blogas pasirinkimas!");
-                        break cond;
-                    }
-                }
-                rs.updateRow();
-                System.out.println("Vartotojas pakoreguotas.");
-            } else {
-                System.out.println("indeksas " + keiciamasId + " nerastas");
-            }
-        } catch (SQLException e) {
-            System.err.println("Ivyko duomenu bazes klaida!");
-        }
-
-    }
-
-    private static void trintiVartotoja() {
-        spausdintiVartotojus(false); // Galima nieko neisvesti jei daug vartotoju.
-        System.out.print("Kuri vartotoja norite istrinti: ");
-
-        MongoCollection<Document> collection = client.getDatabase("mano").getCollection("vartotojai");
-        ArrayList<ObjectId> vartIds = new ArrayList<>();
-
-        for (Document doc : collection.find()) {
-            vartIds.add(doc.getObjectId("_id"));
-        }
-
-        try {
-            int trinamasId = in.nextInt();
-            if (trinamasId < 1) {
-                System.out.println("id privalo buti ne maziau uz 1!");
-                return;
-            }
-            if (trinamasId <= vartIds.size()) {
-                collection.deleteOne(Filters.eq("_id", vartIds.get(trinamasId - 1)));
-                System.out.println(vartIds.get(trinamasId - 1));
-                System.out.println("Vartotojas istrintas");
-            } else {
-                System.out.println("Vartotojas tokiu id nerastas!");
-            }
+            keiciamasId = in.nextInt();
         } catch (InputMismatchException e) {
             System.err.println("Blogai nurodytas id!");
+            return;
         } finally {
             in.nextLine();
         }
+
+        findId(collection, keiciamasId).map(objectId -> Filters.eq("_id", objectId)).ifPresent(filter -> {
+            System.out.print("""
+                    1 - vardas
+                    2 - slaptazodis
+                    3 - email
+                    4 - lytis
+                    Kuri lauka norite keisti:\s""");
+            String pasirinkimas = in.nextLine();
+
+            switch (pasirinkimas) {
+                case "1" -> collection.updateOne(filter, Updates.set("vardas", Ivestis.vardoIvestis()));
+                case "2" -> collection.updateOne(filter, Updates.set("slaptazodis", Ivestis.slaptazodzioIvestis()));
+                case "3" -> collection.updateOne(filter, Updates.set("email", Ivestis.emailIvestis()));
+                case "4" -> collection.updateOne(filter, Updates.set("lytis", Ivestis.lytiesIvestis()));
+                default -> {
+                    System.out.println("Blogas pasirinkimas!");
+                    return;
+                }
+            }
+            System.out.println("Vartotojas pakoreguotas.");
+        });
+
     }
 
-    private static void spausdintiVartotojus(boolean menu) {
+    public static Optional<ObjectId> findId(MongoCollection<Document> collection, int id) {
+        if (id < 1) {
+            System.out.println("id privalo buti ne maziau uz 1!");
+            return Optional.empty();
+        }
+
+        ArrayList<ObjectId> vartIds = new ArrayList<>();
+
+        for (Document doc : collection.find())
+            vartIds.add(doc.getObjectId("_id"));
+
+        if (id > vartIds.size()) {
+            System.out.println("Vartotojas tokiu id nerastas!");
+            return Optional.empty();
+        }
+
+        return Optional.of(vartIds.get(id - 1));
+    }
+
+    private static void trintiVartotoja(MongoDatabase db) {
+        spausdintiVartotojus(db, false); // Galima nieko neisvesti jei daug vartotoju.
+        MongoCollection<Document> collection = db.getCollection("vartotojai");
+
+        System.out.print("Kuri vartotoja norite istrinti: ");
+        int trinamasId;
+        try {
+            trinamasId = in.nextInt();
+        } catch (InputMismatchException e) {
+            System.err.println("Blogai nurodytas id!");
+            return;
+        } finally {
+            in.nextLine();
+        }
+
+        findId(collection, trinamasId).ifPresent(objectId -> {
+            collection.deleteOne(Filters.eq("_id", objectId));
+            System.out.println("Vartotojas istrintas");
+        });
+    }
+
+    private static void spausdintiVartotojus(MongoDatabase db, boolean menu) {
         //TODO Prideti tikrinima ar yra vartotoju duomenu bazeje.
 
         String pasirinkimas = "1";
@@ -195,8 +199,7 @@ public class Main {
 
         StringBuilder sb = new StringBuilder();
 
-        MongoCollection<Document> collection = client.getDatabase("mano")
-                .getCollection("vartotojai");
+        MongoCollection<Document> collection = db.getCollection("vartotojai");
         int i = 1;
         for (Document doc : collection.find()) {
             String id = doc.getObjectId("_id").toHexString();
