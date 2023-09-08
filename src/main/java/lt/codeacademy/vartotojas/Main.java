@@ -2,13 +2,18 @@ package lt.codeacademy.vartotojas;
 
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoCollection;
+import com.mongodb.client.model.Filters;
 import org.bson.Document;
+import org.bson.types.ObjectId;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -23,10 +28,7 @@ import static lt.codeacademy.vartotojas.Ivestis.*;
 
 public class Main {
     static Scanner in = new Scanner(System.in);
-
-    private static Connection conn;
     private static MongoClient client;
-    private static PreparedStatement addUserStatement;
 
     public static void connectToDB() {
         Logger.getLogger("org.mongodb.driver")
@@ -72,10 +74,6 @@ public class Main {
             }
         }
         in.close();
-        try {
-            conn.close();
-        } catch (SQLException e) {
-        }
         System.out.println("Programa baigia darba!");
     }
 
@@ -109,6 +107,7 @@ public class Main {
         in.nextLine();
 
         try {
+            Connection conn = null; // Added so code compiles!
             Statement stat = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
             ResultSet rs = stat.executeQuery("SELECT * FROM vartotojai WHERE id = " + keiciamasId);
             cond:
@@ -147,15 +146,25 @@ public class Main {
         System.out.print("Kuri vartotoja norite istrinti: ");
 
         MongoCollection<Document> collection = client.getDatabase("mano").getCollection("vartotojai");
-        ArrayList<String> vartIds = new ArrayList<>();
+        ArrayList<ObjectId> vartIds = new ArrayList<>();
 
         for (Document doc : collection.find()) {
-            vartIds.add(doc.getObjectId("_id").toHexString());
+            vartIds.add(doc.getObjectId("_id"));
         }
 
         try {
             int trinamasId = in.nextInt();
-            // TODO
+            if (trinamasId < 1) {
+                System.out.println("id privalo buti ne maziau uz 1!");
+                return;
+            }
+            if (trinamasId <= vartIds.size()) {
+                collection.deleteOne(Filters.eq("_id", vartIds.get(trinamasId - 1)));
+                System.out.println(vartIds.get(trinamasId - 1));
+                System.out.println("Vartotojas istrintas");
+            } else {
+                System.out.println("Vartotojas tokiu id nerastas!");
+            }
         } catch (InputMismatchException e) {
             System.err.println("Blogai nurodytas id!");
         } finally {
@@ -202,8 +211,8 @@ public class Main {
             String registracijosData = LocalDateTime.ofInstant(doc.getDate("registracijos_data").toInstant(), ZoneId.of("UTC"))
                     .format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
 
-            sb.append(String.format("%3d | %s | %s | %s | %s | %s | %s | %s\n",
-                    i, id, vardas, slaptazodis, email, lytis,
+            sb.append(String.format("%3d | %s | %s | %s | %s | %s | %s\n",
+                    i, vardas, slaptazodis, email, lytis,
                     gimimoData, registracijosData
             ));
             i++;
