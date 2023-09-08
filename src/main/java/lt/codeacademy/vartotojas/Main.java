@@ -13,6 +13,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.InputMismatchException;
 import java.util.Scanner;
 import java.util.logging.Level;
@@ -144,17 +145,17 @@ public class Main {
     private static void trintiVartotoja() {
         spausdintiVartotojus(false); // Galima nieko neisvesti jei daug vartotoju.
         System.out.print("Kuri vartotoja norite istrinti: ");
+
+        MongoCollection<Document> collection = client.getDatabase("mano").getCollection("vartotojai");
+        ArrayList<String> vartIds = new ArrayList<>();
+
+        for (Document doc : collection.find()) {
+            vartIds.add(doc.getObjectId("_id").toHexString());
+        }
+
         try {
             int trinamasId = in.nextInt();
-            Statement stat = conn.createStatement();
-            boolean wasDeleted = stat.executeUpdate("DELETE FROM vartotojai WHERE id = " + trinamasId) != 0;
-
-            if (wasDeleted)
-                System.out.println("Vartotojas istrintas");
-            else
-                System.out.printf("Vartotojas su id %d nerastas\n", trinamasId);
-        } catch (SQLException e) {
-            System.err.println("Ivyko duombazes klaida!");
+            // TODO
         } catch (InputMismatchException e) {
             System.err.println("Blogai nurodytas id!");
         } finally {
@@ -187,8 +188,7 @@ public class Main {
 
         MongoCollection<Document> collection = client.getDatabase("mano")
                 .getCollection("vartotojai");
-
-
+        int i = 1;
         for (Document doc : collection.find()) {
             String id = doc.getObjectId("_id").toHexString();
             String vardas = doc.getString("vardas");
@@ -202,10 +202,11 @@ public class Main {
             String registracijosData = LocalDateTime.ofInstant(doc.getDate("registracijos_data").toInstant(), ZoneId.of("UTC"))
                     .format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
 
-            sb.append(String.format("%s | %s | %s | %s | %s | %s | %s\n",
-                    id, vardas, slaptazodis, email, lytis,
+            sb.append(String.format("%3d | %s | %s | %s | %s | %s | %s | %s\n",
+                    i, id, vardas, slaptazodis, email, lytis,
                     gimimoData, registracijosData
             ));
+            i++;
         }
 
         String text = sb.toString();
