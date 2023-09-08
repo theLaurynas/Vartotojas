@@ -26,6 +26,8 @@ import java.util.logging.Logger;
 import static lt.codeacademy.vartotojas.Ivestis.*;
 
 public class Main {
+    // 2011-12-03T10:15:30
+    static final DateTimeFormatter ISO_LOCAL_DATE_TIME_NO_MILIS = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     static Scanner in = new Scanner(System.in);
 
     public static void main(String[] args) {
@@ -212,10 +214,10 @@ public class Main {
                     .format(DateTimeFormatter.ISO_DATE);
 
             String registracijosData = LocalDateTime.ofInstant(doc.getDate("registracijos_data").toInstant(), ZoneId.of("UTC"))
-                    .format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+                    .format(ISO_LOCAL_DATE_TIME_NO_MILIS);
 
-            sb.append(String.format("%3d | %s | %s | %s | %s | %s | %s\n",
-                    i, vardas, slaptazodis, email, lytis,
+            sb.append(String.format("%03d | %s | ****** | %s | %s | %s | %s\n",
+                    i, vardas, email, lytis,
                     gimimoData, registracijosData
             ));
             i++;
