@@ -6,6 +6,7 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Updates;
 import org.bson.Document;
+import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
@@ -59,7 +60,8 @@ public class Main {
                     │ 2 - Pakeisti esama vartotoja     │
                     │ 3 - Trinti vartotoja             │
                     │ 4 - Atspausdinti vartotojus      │
-                    │ 5 - Baigti programa              │
+                    │ 5 - Atspausdinti viena vartotoja │
+                    │ 6 - Baigti programa              │
                     └──────────────────────────────────┘
                       Jusu pasirinkimas:\s""");
 
@@ -75,7 +77,8 @@ public class Main {
                 case 2 -> modifikuotiVartotoja(db);
                 case 3 -> trintiVartotoja(db);
                 case 4 -> spausdintiVartotojus(db, true);
-                case 5 -> {
+                case 5 -> spausdintiVartotoja(db);
+                case 6 -> {
                     break menu;
                 }
                 default -> System.out.println("Blogas pasirinkimas!");
@@ -126,7 +129,8 @@ public class Main {
             in.nextLine();
         }
 
-        findId(keiciamasId).map(objectId -> Filters.eq("_id", objectId)).ifPresent(filter -> {
+        findId(keiciamasId).ifPresent(objectId -> {
+            Bson filter = Filters.eq("_id", objectId);
             System.out.print("""
                     1 - vardas
                     2 - slaptazodis
@@ -147,6 +151,7 @@ public class Main {
             }
             System.out.println("Vartotojas pakoreguotas.");
             jedis.del("vartotojai");
+            jedis.del(objectId.toHexString());
         });
 
     }
@@ -157,7 +162,7 @@ public class Main {
             return Optional.empty();
         }
 
-        if (id > jedis.llen("vartotojai_id")) {
+        if (id > jedis.llen("vartotojai_ids")) {
             System.out.println("Vartotojas tokiu id nerastas!");
             return Optional.empty();
         }
@@ -183,13 +188,19 @@ public class Main {
         findId(trinamasId).ifPresent(objectId -> {
             collection.deleteOne(Filters.eq("_id", objectId));
             System.out.println("Vartotojas istrintas");
-            jedis.lrem("vartotojai_ids", 1, objectId.toHexString());
+            String id = objectId.toHexString();
+            jedis.lrem("vartotojai_ids", 1, id);
             jedis.del("vartotojai");
+            jedis.del(id);
         });
     }
 
     private static void spausdintiVartotojus(MongoDatabase db, boolean menu) {
-        //TODO Prideti tikrinima ar yra vartotoju duomenu bazeje.
+        long kiekis = jedis.llen("vartotojai_ids");
+        if (kiekis == 0) {
+            System.out.println("Vartotoju nera!");
+            return;
+        }
 
         String pasirinkimas = "1";
 
@@ -219,22 +230,7 @@ public class Main {
             MongoCollection<Document> collection = db.getCollection("vartotojai");
             int i = 1;
             for (Document doc : collection.find()) {
-                String id = doc.getObjectId("_id").toHexString();
-                String vardas = doc.getString("vardas");
-                String slaptazodis = doc.getString("slaptazodis");
-                String email = doc.getString("email");
-                String lytis = doc.getString("lytis");
-
-                String gimimoData = LocalDate.ofInstant(doc.getDate("gimimo_data").toInstant(), ZoneId.of("UTC"))
-                        .format(DateTimeFormatter.ISO_DATE);
-
-                String registracijosData = LocalDateTime.ofInstant(doc.getDate("registracijos_data").toInstant(), ZoneId.of("UTC"))
-                        .format(ISO_LOCAL_DATE_TIME_NO_MILIS);
-
-                sb.append(String.format("%03d | %s | ****** | %s | %s | %s | %s\n",
-                        i, vardas, email, lytis,
-                        gimimoData, registracijosData
-                ));
+                sb.append(docToString(i, doc)).append("\n");
                 i++;
             }
 
@@ -252,6 +248,56 @@ public class Main {
                 issaugotiIFaila(text);
             }
         }
+    }
+
+    private static String docToString(int i, Document doc) {
+        String id = doc.getObjectId("_id").toHexString();
+        String vardas = doc.getString("vardas");
+        String slaptazodis = doc.getString("slaptazodis");
+        String email = doc.getString("email");
+        String lytis = doc.getString("lytis");
+
+        String gimimoData = LocalDate.ofInstant(doc.getDate("gimimo_data").toInstant(), ZoneId.of("UTC"))
+                .format(DateTimeFormatter.ISO_DATE);
+
+        String registracijosData = LocalDateTime.ofInstant(doc.getDate("registracijos_data").toInstant(), ZoneId.of("UTC"))
+                .format(ISO_LOCAL_DATE_TIME_NO_MILIS);
+
+        return String.format("%03d | %s | ****** | %s | %s | %s | %s",
+                i, vardas, email, lytis,
+                gimimoData, registracijosData
+        );
+    }
+
+    private static void spausdintiVartotoja(MongoDatabase db) {
+        long kiekis = jedis.llen("vartotojai_ids");
+        if (kiekis == 0) {
+            System.out.println("Vartotoju nera!");
+            return;
+        }
+
+        System.out.printf("Kuri vartotoja norite istrinti(1-%d): ", kiekis);
+        int id = 0;
+        try {
+            id = in.nextInt();
+        } catch (InputMismatchException e) {
+            System.err.println("Blogai nurodytas id!");
+        } finally {
+            in.nextLine();
+        }
+
+        findId(id).ifPresent(x -> {
+            String idString = x.toHexString();
+            if (jedis.exists(idString)) {
+                System.out.println(jedis.get(idString));
+            } else {
+                MongoCollection<Document> collection = db.getCollection("vartotojai");
+                Document doc = collection.find(Filters.eq("_id", x)).first();
+                String text = docToString(1, doc);
+                System.out.println(text);
+                jedis.set(idString, text);
+            }
+        });
     }
 
     private static void issaugotiIFaila(String text) {
