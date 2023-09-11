@@ -42,10 +42,11 @@ public class Main {
         MongoClient client = new MongoClient();
         MongoDatabase db = client.getDatabase("mano");
 
-        if (!jedis.exists("vartotojai_ids"))
+        if (!jedis.exists("vartotojai_ids")) {
             for (Document doc : db.getCollection("vartotojai").find()) {
                 jedis.rpush("vartotojai_ids", doc.getObjectId("_id").toHexString());
             }
+        }
 
         int pasirinkimas;
 
@@ -91,6 +92,7 @@ public class Main {
     }
 
     private static void ivestiVartotoja(MongoDatabase db) {
+        ObjectId objectId = ObjectId.get();
         String vardas = vardoIvestis();
         String slaptazodis = slaptazodzioIvestis();
         String email = emailIvestis();
@@ -100,7 +102,7 @@ public class Main {
         MongoCollection<Document> collection = db.getCollection("vartotojai");
 
         Document doc = new Document()
-                .append("_id", ObjectId.get())
+                .append("_id", objectId)
                 .append("vardas", vardas)
                 .append("slaptazodis", slaptazodis)
                 .append("email", email)
@@ -109,7 +111,7 @@ public class Main {
                 .append("registracijos_data", LocalDateTime.now());
 
         collection.insertOne(doc);
-        jedis.rpush("vartotojai_ids", doc.getObjectId("_id").toHexString());
+        jedis.rpush("vartotojai_ids", objectId.toHexString());
 
         System.out.println("Vartotojas sukurtas.");
         jedis.del("vartotojai");
@@ -212,12 +214,11 @@ public class Main {
                     3 - I ekrana ir i faila
                     Jusu pasirinkimas:\s""");
             pasirinkimas = in.nextLine();
-        }
 
-
-        if (!pasirinkimas.equals("1") && !pasirinkimas.equals("2") && !pasirinkimas.equals("3")) {
-            System.out.println("Blogas pasirinkimas!");
-            return;
+            if (!pasirinkimas.equals("1") && !pasirinkimas.equals("2") && !pasirinkimas.equals("3")) {
+                System.out.println("Blogas pasirinkimas!");
+                return;
+            }
         }
 
         String text;
@@ -237,8 +238,6 @@ public class Main {
             text = sb.toString();
             jedis.set("vartotojai", text);
         }
-
-        jedis.lrange("vartotojai_ids", 0, -1).forEach(System.out::println);
 
         switch (pasirinkimas) {
             case "1" -> System.out.print(text);
@@ -277,22 +276,22 @@ public class Main {
         }
 
         System.out.printf("Kuri vartotoja norite istrinti(1-%d): ", kiekis);
-        int id = 0;
+        int idInt = 0;
         try {
-            id = in.nextInt();
+            idInt = in.nextInt();
         } catch (InputMismatchException e) {
             System.err.println("Blogai nurodytas id!");
         } finally {
             in.nextLine();
         }
 
-        findId(id).ifPresent(x -> {
-            String idString = x.toHexString();
+        findId(idInt).ifPresent(id -> {
+            String idString = id.toHexString();
             if (jedis.exists(idString)) {
                 System.out.println(jedis.get(idString));
             } else {
                 MongoCollection<Document> collection = db.getCollection("vartotojai");
-                Document doc = collection.find(Filters.eq("_id", x)).first();
+                Document doc = collection.find(Filters.eq("_id", id)).first();
                 String text = docToString(1, doc);
                 System.out.println(text);
                 jedis.set(idString, text);
