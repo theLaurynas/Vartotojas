@@ -7,6 +7,8 @@ import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Updates;
 import org.bson.Document;
 import org.bson.types.ObjectId;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
 
 import java.io.File;
 import java.io.IOException;
@@ -29,6 +31,9 @@ public class Main {
     // 2011-12-03T10:15:30
     static final DateTimeFormatter ISO_LOCAL_DATE_TIME_NO_MILIS = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     static Scanner in = new Scanner(System.in);
+
+    static JedisPool jedisPool = new JedisPool();
+    static Jedis jedis = jedisPool.getResource();
 
     public static void main(String[] args) {
         Logger.getLogger("org.mongodb.driver")
@@ -98,6 +103,7 @@ public class Main {
         collection.insertOne(doc);
 
         System.out.println("Vartotojas sukurtas.");
+        jedis.del("vartotojai");
     }
 
     private static void modifikuotiVartotoja(MongoDatabase db) {
@@ -134,6 +140,7 @@ public class Main {
                 }
             }
             System.out.println("Vartotojas pakoreguotas.");
+            jedis.del("vartotojai");
         });
 
     }
@@ -175,6 +182,7 @@ public class Main {
         findId(collection, trinamasId).ifPresent(objectId -> {
             collection.deleteOne(Filters.eq("_id", objectId));
             System.out.println("Vartotojas istrintas");
+            jedis.del("vartotojai");
         });
     }
 
@@ -199,31 +207,38 @@ public class Main {
             return;
         }
 
-        StringBuilder sb = new StringBuilder();
+        String text;
+        if (jedis.exists("vartotojai")) {
+            text = jedis.get("vartotojai");
+            System.out.println("cache hit!");
+        } else {
+            StringBuilder sb = new StringBuilder();
 
-        MongoCollection<Document> collection = db.getCollection("vartotojai");
-        int i = 1;
-        for (Document doc : collection.find()) {
-            String id = doc.getObjectId("_id").toHexString();
-            String vardas = doc.getString("vardas");
-            String slaptazodis = doc.getString("slaptazodis");
-            String email = doc.getString("email");
-            String lytis = doc.getString("lytis");
+            MongoCollection<Document> collection = db.getCollection("vartotojai");
+            int i = 1;
+            for (Document doc : collection.find()) {
+                String id = doc.getObjectId("_id").toHexString();
+                String vardas = doc.getString("vardas");
+                String slaptazodis = doc.getString("slaptazodis");
+                String email = doc.getString("email");
+                String lytis = doc.getString("lytis");
 
-            String gimimoData = LocalDate.ofInstant(doc.getDate("gimimo_data").toInstant(), ZoneId.of("UTC"))
-                    .format(DateTimeFormatter.ISO_DATE);
+                String gimimoData = LocalDate.ofInstant(doc.getDate("gimimo_data").toInstant(), ZoneId.of("UTC"))
+                        .format(DateTimeFormatter.ISO_DATE);
 
-            String registracijosData = LocalDateTime.ofInstant(doc.getDate("registracijos_data").toInstant(), ZoneId.of("UTC"))
-                    .format(ISO_LOCAL_DATE_TIME_NO_MILIS);
+                String registracijosData = LocalDateTime.ofInstant(doc.getDate("registracijos_data").toInstant(), ZoneId.of("UTC"))
+                        .format(ISO_LOCAL_DATE_TIME_NO_MILIS);
 
-            sb.append(String.format("%03d | %s | ****** | %s | %s | %s | %s\n",
-                    i, vardas, email, lytis,
-                    gimimoData, registracijosData
-            ));
-            i++;
+                sb.append(String.format("%03d | %s | ****** | %s | %s | %s | %s\n",
+                        i, vardas, email, lytis,
+                        gimimoData, registracijosData
+                ));
+                i++;
+            }
+
+            text = sb.toString();
+            jedis.set("vartotojai", text);
         }
-
-        String text = sb.toString();
 
         switch (pasirinkimas) {
             case "1" -> System.out.print(text);
