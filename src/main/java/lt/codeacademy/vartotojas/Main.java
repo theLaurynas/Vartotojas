@@ -18,7 +18,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.InputMismatchException;
 import java.util.Optional;
 import java.util.Scanner;
@@ -41,6 +40,11 @@ public class Main {
 
         MongoClient client = new MongoClient();
         MongoDatabase db = client.getDatabase("mano");
+
+        if (!jedis.exists("vartotojai_ids"))
+            for (Document doc : db.getCollection("vartotojai").find()) {
+                jedis.rpush("vartotojai_ids", doc.getObjectId("_id").toHexString());
+            }
 
         int pasirinkimas;
 
@@ -93,6 +97,7 @@ public class Main {
         MongoCollection<Document> collection = db.getCollection("vartotojai");
 
         Document doc = new Document()
+                .append("_id", ObjectId.get())
                 .append("vardas", vardas)
                 .append("slaptazodis", slaptazodis)
                 .append("email", email)
@@ -101,6 +106,7 @@ public class Main {
                 .append("registracijos_data", LocalDateTime.now());
 
         collection.insertOne(doc);
+        jedis.rpush("vartotojai_ids", doc.getObjectId("_id").toHexString());
 
         System.out.println("Vartotojas sukurtas.");
         jedis.del("vartotojai");
@@ -120,7 +126,7 @@ public class Main {
             in.nextLine();
         }
 
-        findId(collection, keiciamasId).map(objectId -> Filters.eq("_id", objectId)).ifPresent(filter -> {
+        findId(keiciamasId).map(objectId -> Filters.eq("_id", objectId)).ifPresent(filter -> {
             System.out.print("""
                     1 - vardas
                     2 - slaptazodis
@@ -145,23 +151,18 @@ public class Main {
 
     }
 
-    public static Optional<ObjectId> findId(MongoCollection<Document> collection, int id) {
+    public static Optional<ObjectId> findId(int id) {
         if (id < 1) {
             System.out.println("id privalo buti ne maziau uz 1!");
             return Optional.empty();
         }
 
-        ArrayList<ObjectId> vartIds = new ArrayList<>();
-
-        for (Document doc : collection.find())
-            vartIds.add(doc.getObjectId("_id"));
-
-        if (id > vartIds.size()) {
+        if (id > jedis.llen("vartotojai_id")) {
             System.out.println("Vartotojas tokiu id nerastas!");
             return Optional.empty();
         }
 
-        return Optional.of(vartIds.get(id - 1));
+        return Optional.of(new ObjectId(jedis.lindex("vartotojai_ids", id - 1)));
     }
 
     private static void trintiVartotoja(MongoDatabase db) {
@@ -179,9 +180,10 @@ public class Main {
             in.nextLine();
         }
 
-        findId(collection, trinamasId).ifPresent(objectId -> {
+        findId(trinamasId).ifPresent(objectId -> {
             collection.deleteOne(Filters.eq("_id", objectId));
             System.out.println("Vartotojas istrintas");
+            jedis.lrem("vartotojai_ids", 1, objectId.toHexString());
             jedis.del("vartotojai");
         });
     }
@@ -239,6 +241,8 @@ public class Main {
             text = sb.toString();
             jedis.set("vartotojai", text);
         }
+
+        jedis.lrange("vartotojai_ids", 0, -1).forEach(System.out::println);
 
         switch (pasirinkimas) {
             case "1" -> System.out.print(text);
