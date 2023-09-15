@@ -21,9 +21,9 @@ import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.InputMismatchException;
+import java.util.List;
 import java.util.Optional;
 import java.util.Scanner;
 import java.util.logging.Level;
@@ -48,10 +48,9 @@ public class Main {
         MongoClient client = new MongoClient();
         MongoDatabase db = client.getDatabase("mano");
 
-        if (!jedis.exists("vartotojai_ids")) {
-            for (Document doc : db.getCollection("vartotojai").find()) {
-                jedis.rpush("vartotojai_ids", doc.getObjectId("_id").toHexString());
-            }
+        try (Session session = factory.openSession()) {
+            int userCount = session.createQuery("select count(*) FROM User", int.class).getFirstResult();
+            jedis.set("vartotojai_size", String.valueOf(userCount));
         }
 
         int pasirinkimas;
@@ -80,11 +79,11 @@ public class Main {
 
             in.nextLine();
             switch (pasirinkimas) {
-                case 1 -> ivestiVartotoja(db);
+                case 1 -> ivestiVartotoja();
                 case 2 -> modifikuotiVartotoja(db);
                 case 3 -> trintiVartotoja(db);
-                case 4 -> spausdintiVartotojus(db, true);
-                case 5 -> spausdintiVartotoja(db);
+                case 4 -> spausdintiVartotojus(true);
+                case 5 -> spausdintiVartotoja();
                 case 6 -> {
                     break menu;
                 }
@@ -92,14 +91,15 @@ public class Main {
             }
         }
 
+        jedis.close();
+        jedisPool.close();
         factory.close();
         client.close();
         in.close();
         System.out.println("Programa baigia darba!");
     }
 
-    private static void ivestiVartotoja(MongoDatabase db) {
-        int id = 0;
+    private static void ivestiVartotoja() {
         /*String vardas = vardoIvestis();
         String slaptazodis = slaptazodzioIvestis();
         String email = emailIvestis();
@@ -120,17 +120,16 @@ public class Main {
             tx.commit();
         }
 
-        id = user.getId();
-        System.out.println("Naujo elemento id: " + id);
+        int id = user.getId();
 
-        jedis.rpush("vartotojai_ids", String.valueOf(id));
+        jedis.incr("vartotojai_size");
 
         System.out.println("Vartotojas sukurtas.");
         jedis.del("vartotojai");
     }
 
     private static void modifikuotiVartotoja(MongoDatabase db) {
-        spausdintiVartotojus(db, false); // Galima nieko neisvesti jei daug vartotoju.
+        spausdintiVartotojus(false); // Galima nieko neisvesti jei daug vartotoju.
         MongoCollection<Document> collection = db.getCollection("vartotojai");
         System.out.print("Kuri vartotoja norite keisti: ");
         int keiciamasId;
@@ -185,13 +184,13 @@ public class Main {
     }
 
     private static void trintiVartotoja(MongoDatabase db) {
-        spausdintiVartotojus(db, false); // Galima nieko neisvesti jei daug vartotoju.
+        spausdintiVartotojus(false); // Galima nieko neisvesti jei daug vartotoju.
         MongoCollection<Document> collection = db.getCollection("vartotojai");
 
         System.out.print("Kuri vartotoja norite istrinti: ");
-        int trinamasId;
+        int id;
         try {
-            trinamasId = in.nextInt();
+            id = in.nextInt();
         } catch (InputMismatchException e) {
             System.err.println("Blogai nurodytas id!");
             return;
@@ -199,18 +198,24 @@ public class Main {
             in.nextLine();
         }
 
-        findId(trinamasId).ifPresent(objectId -> {
-            collection.deleteOne(Filters.eq("_id", objectId));
-            System.out.println("Vartotojas istrintas");
-            String id = objectId.toHexString();
-            jedis.lrem("vartotojai_ids", 1, id);
-            jedis.del("vartotojai");
-            jedis.del(id);
-        });
+        try (Session session = factory.openSession()) {
+            User user = session.find(User.class, id);
+            if (user != null) {
+                Transaction tx = session.beginTransaction();
+                session.remove(user);
+                tx.commit();
+            }
+        }
+
+        System.out.println("Vartotojas istrintas");
+        String idString = String.valueOf(id);
+        jedis.decr("vartotojai_size");
+        jedis.del("vartotojai");
+        jedis.del(idString);
     }
 
-    private static void spausdintiVartotojus(MongoDatabase db, boolean menu) {
-        long kiekis = jedis.llen("vartotojai_ids");
+    private static void spausdintiVartotojus(boolean menu) {
+        long kiekis = Integer.parseInt(jedis.get("vartotojai_size"));
         if (kiekis == 0) {
             System.out.println("Vartotoju nera!");
             return;
@@ -240,11 +245,13 @@ public class Main {
         } else {
             StringBuilder sb = new StringBuilder();
 
-            MongoCollection<Document> collection = db.getCollection("vartotojai");
-            int i = 1;
-            for (Document doc : collection.find()) {
-                sb.append(docToString(i, doc)).append("\n");
-                i++;
+            List<User> users;
+            try (Session session = factory.openSession()) {
+                users = session.createQuery("from User", User.class).getResultList();
+            }
+
+            for (User user : users) {
+                sb.append(user.toSimpleString()).append("\n");
             }
 
             text = sb.toString();
@@ -261,54 +268,39 @@ public class Main {
         }
     }
 
-    private static String docToString(int i, Document doc) {
-        String id = doc.getObjectId("_id").toHexString();
-        String vardas = doc.getString("vardas");
-        String slaptazodis = doc.getString("slaptazodis");
-        String email = doc.getString("email");
-        String lytis = doc.getString("lytis");
-
-        String gimimoData = LocalDate.ofInstant(doc.getDate("gimimo_data").toInstant(), ZoneId.of("UTC"))
-                .format(DateTimeFormatter.ISO_DATE);
-
-        String registracijosData = LocalDateTime.ofInstant(doc.getDate("registracijos_data").toInstant(), ZoneId.of("UTC"))
-                .format(ISO_LOCAL_DATE_TIME_NO_MILIS);
-
-        return String.format("%03d | %s | ****** | %s | %s | %s | %s",
-                i, vardas, email, lytis,
-                gimimoData, registracijosData
-        );
-    }
-
-    private static void spausdintiVartotoja(MongoDatabase db) {
-        long kiekis = jedis.llen("vartotojai_ids");
+    private static void spausdintiVartotoja() {
+        long kiekis = Integer.parseInt(jedis.get("vartotojai_size"));
         if (kiekis == 0) {
             System.out.println("Vartotoju nera!");
             return;
         }
 
-        System.out.printf("Kuri vartotoja norite istrinti(1-%d): ", kiekis);
-        int idInt = 0;
+        System.out.print("Kuri vartotoja norite spausdinti: ");
+        int id = 0;
         try {
-            idInt = in.nextInt();
+            id = in.nextInt();
         } catch (InputMismatchException e) {
             System.err.println("Blogai nurodytas id!");
         } finally {
             in.nextLine();
         }
 
-        findId(idInt).ifPresent(id -> {
-            String idString = id.toHexString();
-            if (jedis.exists(idString)) {
-                System.out.println(jedis.get(idString));
-            } else {
-                MongoCollection<Document> collection = db.getCollection("vartotojai");
-                Document doc = collection.find(Filters.eq("_id", id)).first();
-                String text = docToString(1, doc);
+        String idString = String.valueOf(id);
+        if (jedis.exists(idString)) {
+            System.out.println(jedis.get(idString));
+        } else {
+            User user;
+            try (Session session = factory.openSession()) {
+                user = session.find(User.class, id);
+            }
+            if (user != null) {
+                String text = user.toSimpleString();
                 System.out.println(text);
                 jedis.set(idString, text);
+            } else {
+                System.out.println("Tokio vartotojo nera!");
             }
-        });
+        }
     }
 
     private static void issaugotiIFaila(String text) {
