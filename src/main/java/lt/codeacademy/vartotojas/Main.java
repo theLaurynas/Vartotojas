@@ -8,6 +8,10 @@ import com.mongodb.client.model.Updates;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+import org.hibernate.Transaction;
+import org.hibernate.cfg.Configuration;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 
@@ -25,19 +29,21 @@ import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static lt.codeacademy.vartotojas.Ivestis.*;
-
 public class Main {
-    // 2011-12-03T10:15:30
     static final DateTimeFormatter ISO_LOCAL_DATE_TIME_NO_MILIS = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final SessionFactory factory;
     static Scanner in = new Scanner(System.in);
-
     static JedisPool jedisPool = new JedisPool();
     static Jedis jedis = jedisPool.getResource();
 
-    public static void main(String[] args) {
+    static {
         Logger.getLogger("org.mongodb.driver")
                 .setLevel(Level.WARNING);
+        Logger.getLogger("org.hibernate").setLevel(Level.WARNING);
+        factory = new Configuration().configure().buildSessionFactory();
+    }
+
+    public static void main(String[] args) {
 
         MongoClient client = new MongoClient();
         MongoDatabase db = client.getDatabase("mano");
@@ -86,32 +92,38 @@ public class Main {
             }
         }
 
+        factory.close();
         client.close();
         in.close();
         System.out.println("Programa baigia darba!");
     }
 
     private static void ivestiVartotoja(MongoDatabase db) {
-        ObjectId objectId = ObjectId.get();
-        String vardas = vardoIvestis();
+        int id = 0;
+        /*String vardas = vardoIvestis();
         String slaptazodis = slaptazodzioIvestis();
         String email = emailIvestis();
         String lytis = lytiesIvestis();
-        LocalDate gimimoData = gimimoDatosIvestis();
+        LocalDate gimimoData = gimimoDatosIvestis();*/
 
-        MongoCollection<Document> collection = db.getCollection("vartotojai");
+        String vardas = "Jonas";
+        String slaptazodis = "2183bc4a0b6a9cf387c1302da9bb0ac8a55ed540";
+        String email = "jonas@gmail.com";
+        String lytis = "vyras";
+        LocalDate gimimoData = LocalDate.of(2000, 1, 1);
 
-        Document doc = new Document()
-                .append("_id", objectId)
-                .append("vardas", vardas)
-                .append("slaptazodis", slaptazodis)
-                .append("email", email)
-                .append("lytis", lytis)
-                .append("gimimo_data", gimimoData)
-                .append("registracijos_data", LocalDateTime.now());
+        User user = new User(0, vardas, slaptazodis, email, lytis, gimimoData, LocalDateTime.now());
 
-        collection.insertOne(doc);
-        jedis.rpush("vartotojai_ids", objectId.toHexString());
+        try (Session session = factory.openSession()) {
+            Transaction tx = session.beginTransaction();
+            session.merge(user);
+            tx.commit();
+        }
+
+        id = user.getId();
+        System.out.println("Naujo elemento id: " + id);
+
+        jedis.rpush("vartotojai_ids", String.valueOf(id));
 
         System.out.println("Vartotojas sukurtas.");
         jedis.del("vartotojai");
