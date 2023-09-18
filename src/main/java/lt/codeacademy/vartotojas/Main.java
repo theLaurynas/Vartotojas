@@ -4,6 +4,10 @@ import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Root;
 import lombok.extern.java.Log;
+import net.sourceforge.argparse4j.ArgumentParsers;
+import net.sourceforge.argparse4j.impl.Arguments;
+import net.sourceforge.argparse4j.inf.ArgumentParser;
+import net.sourceforge.argparse4j.inf.Namespace;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
@@ -23,6 +27,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.InputMismatchException;
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.logging.*;
 
@@ -33,6 +38,8 @@ public class Main {
     static Scanner in = new Scanner(System.in);
     static JedisPool jedisPool = new JedisPool();
     static Jedis jedis = jedisPool.getResource();
+
+    static Map<String, String> locale;
 
     static {
         Logger hibernate_log = Logger.getLogger("org.hibernate");
@@ -51,6 +58,7 @@ public class Main {
         hibernate_log.getParent().getHandlers()[0].setFormatter(formatter);
 
         log.getParent().getHandlers()[0].setFormatter(formatter);
+        log.setLevel(Level.WARNING);
         try {
             Handler fileHandler = new FileHandler("Vartotojas.LOG", true);
             fileHandler.setFormatter(formatter);
@@ -60,7 +68,24 @@ public class Main {
         }
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
+
+        ArgumentParser parser = ArgumentParsers.newFor("Vartotojas").build();
+        parser.defaultHelp(true).description("Vartotoju ir postu programa");
+        parser.addArgument("-v", "--verbose").action(Arguments.storeTrue())
+                .dest("debug").help("Print debug info.");
+        parser.addArgument("-l", "--lang")
+                .dest("lang").help("Sets meniu language");
+        Namespace ns = parser.parseArgs(args);
+        boolean debug = ns.getBoolean("debug");
+
+        String lang = ns.getString("lang");
+
+        if (debug) {
+            log.setLevel(Level.ALL);
+            log.getParent().getHandlers()[0].setLevel(Level.ALL);
+        }
+
 
         try (Session session = factory.openSession()) {
             int userCount = session.createQuery("select count(*) FROM User", int.class).getFirstResult();
@@ -68,25 +93,64 @@ public class Main {
             log.info("vartotojai irasyti i cache");
         }
 
+        var locale_lt = Map.of(
+                "user.created", "Vartotojas sukurtas"
+        );
+
+        var locale_en = Map.of(
+                "user.created", "User created"
+        );
+
+        if (lang.equals("lt"))
+            locale = locale_lt;
+        else if (lang.equals("en"))
+            locale = locale_en;
+
+
         int pasirinkimas;
+
+        String menu_lt = """
+                                    
+                ┌───────────────────────────────────┐
+                │               MENIU               │
+                ├───────────────────────────────────┤
+                │ 1 - Ivesti vartotoja              │
+                │ 2 - Pakeisti esama vartotoja      │
+                │ 3 - Trinti vartotoja              │
+                │ 4 - Atspausdinti vartotojus       │
+                │ 5 - Atspausdinti viena vartotoja  │
+                │ 6 - Sukurti nauja posta           │
+                │ 7 - Atspausdinti vartotojo postus │
+                │ 8 - Baigti programa               │
+                └───────────────────────────────────┘
+                  Jusu pasirinkimas:\s""";
+
+        String menu_en = """
+                                    
+                ┌───────────────────────────────────┐
+                │               MENU                │
+                ├───────────────────────────────────┤
+                │ 1 - Insert user                   │
+                │ 2 - Update user                   │
+                │ 3 - Delete user                   │
+                │ 4 - Print all users               │
+                │ 5 - Print one user                │
+                │ 6 - Create new post               │
+                │ 7 - Print all users posts         │
+                │ 8 - Exit program                  │
+                └───────────────────────────────────┘
+                  Jusu pasirinkimas:\s""";
+
 
         menu:
         while (true) {
-            System.out.print("""
-                                        
-                    ┌───────────────────────────────────┐
-                    │               MENIU               │
-                    ├───────────────────────────────────┤
-                    │ 1 - Ivesti vartotoja              │
-                    │ 2 - Pakeisti esama vartotoja      │
-                    │ 3 - Trinti vartotoja              │
-                    │ 4 - Atspausdinti vartotojus       │
-                    │ 5 - Atspausdinti viena vartotoja  │
-                    │ 6 - Sukurti nauja posta           │
-                    │ 7 - Atspausdinti vartotojo postus │
-                    │ 8 - Baigti programa               │
-                    └───────────────────────────────────┘
-                      Jusu pasirinkimas:\s""");
+            if (lang.equals("en"))
+                System.out.print(menu_en);
+
+            else if (lang.equals("lt"))
+                System.out.print(menu_lt);
+            else
+                System.exit(1);
 
             try {
                 pasirinkimas = in.nextInt();
@@ -140,7 +204,8 @@ public class Main {
 
             List<Post> posts = user.getPosts();
             if (!posts.isEmpty()) {
-                posts.forEach(post -> System.out.println("\t- " + post.getPavadinimas() + " | " + post.getTekstas()));
+                posts.stream().map(post -> "\t- " + post.getPavadinimas() + " | " + post.getTekstas())
+                        .forEach(System.out::println);
             } else {
                 log.warning("Vartotojas neturi nei vieno posto!");
             }
@@ -209,7 +274,7 @@ public class Main {
 
         jedis.incr("vartotojai_size");
 
-        log.info("Vartotojas sukurtas.");
+        log.info(locale.get("user.created"));
         jedis.del("vartotojai");
     }
 
