@@ -1,19 +1,18 @@
 package lt.codeacademy.vartotojas;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 import static lt.codeacademy.vartotojas.Main.ISO_LOCAL_DATE_TIME_NO_MILIS;
 
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 @Entity
 @Table(schema = "vartotojas", name = "users")
 public class User {
@@ -32,6 +31,17 @@ public class User {
     @Column(name = "registracijos_data")
     private LocalDateTime registracijosData;
 
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    private List<Post> posts;
+
+    public User(String vardas, String slaptazodis, String email, String lytis, LocalDate gimimoData, LocalDateTime registracijosData) {
+        this.vardas = vardas;
+        this.slaptazodis = slaptazodis;
+        this.email = email;
+        this.lytis = lytis;
+        this.gimimoData = gimimoData;
+        this.registracijosData = registracijosData;
+    }
 
     public String toSimpleString() {
 

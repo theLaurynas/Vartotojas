@@ -1,6 +1,10 @@
 package lt.codeacademy.vartotojas;
 
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Root;
 import lombok.extern.java.Log;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
@@ -31,7 +35,8 @@ public class Main {
     static Jedis jedis = jedisPool.getResource();
 
     static {
-        Logger.getLogger("org.hibernate").setLevel(Level.WARNING);
+        Logger hibernate_log = Logger.getLogger("org.hibernate");
+        hibernate_log.setLevel(Level.WARNING);
         factory = new Configuration().configure().buildSessionFactory();
         Formatter formatter = new Formatter() {
             @Override
@@ -43,6 +48,8 @@ public class Main {
                         record.getMessage());
             }
         };
+        hibernate_log.getParent().getHandlers()[0].setFormatter(formatter);
+
         log.getParent().getHandlers()[0].setFormatter(formatter);
         try {
             Handler fileHandler = new FileHandler("Vartotojas.LOG", true);
@@ -75,7 +82,8 @@ public class Main {
                     │ 3 - Trinti vartotoja             │
                     │ 4 - Atspausdinti vartotojus      │
                     │ 5 - Atspausdinti viena vartotoja │
-                    │ 6 - Baigti programa              │
+                    │ 6 - Sukurti nauja posta          │
+                    │ 7 - Baigti programa              │
                     └──────────────────────────────────┘
                       Jusu pasirinkimas:\s""");
 
@@ -92,7 +100,8 @@ public class Main {
                 case 3 -> trintiVartotoja();
                 case 4 -> spausdintiVartotojus(true);
                 case 5 -> spausdintiVartotoja();
-                case 6 -> {
+                case 6 -> sukurtiPosta();
+                case 7 -> {
                     break menu;
                 }
                 default -> System.out.println("Blogas pasirinkimas!");
@@ -106,6 +115,43 @@ public class Main {
         log.info("Programa baigia darba!");
     }
 
+    private static void sukurtiPosta() {
+        System.out.print("Iveskite email: ");
+        String email = in.nextLine();
+        System.out.print("Iveskite password: ");
+        String password = DigestUtils.sha1Hex(in.nextLine());
+
+        try (Session session = factory.openSession()) {
+            CriteriaBuilder cb = session.getCriteriaBuilder();
+            CriteriaQuery<User> cq = cb.createQuery(User.class);
+            Root<User> root = cq.from(User.class);
+            cq.select(root)
+                    .where(cb.and(
+                            cb.equal(root.get("email"), email),
+                            cb.equal(root.get("slaptazodis"), password)
+                    ));
+            List<User> users = session.createQuery(cq).getResultList();
+            if (users.size() == 1) {
+                User user = users.get(0);
+                System.out.print("Iveskite posto pavadinima: ");
+                String pavadinimas = in.nextLine();
+                System.out.print("Iveskite posto teksta: ");
+                String tekstas = in.nextLine();
+
+                Post post = new Post(pavadinimas, tekstas, user);
+
+                user.getPosts().add(post);
+
+                Transaction tx = session.beginTransaction();
+                session.merge(user);
+                tx.commit();
+                log.info("Postas sukurtas");
+            } else {
+                log.warning("Neteisingas email ir/arba slaptazodis!");
+            }
+        }
+    }
+
     private static void ivestiVartotoja() {
         /*String vardas = vardoIvestis();
         String slaptazodis = slaptazodzioIvestis();
@@ -114,12 +160,12 @@ public class Main {
         LocalDate gimimoData = gimimoDatosIvestis();*/
 
         String vardas = "Jonas";
-        String slaptazodis = "2183bc4a0b6a9cf387c1302da9bb0ac8a55ed540";
+        String slaptazodis = "54e8d2e15d3caa89aa3f82c8c0428ad5742f056c";
         String email = "jonas@gmail.com";
         String lytis = "vyras";
         LocalDate gimimoData = LocalDate.of(2000, 1, 1);
 
-        User user = new User(0, vardas, slaptazodis, email, lytis, gimimoData, LocalDateTime.now());
+        User user = new User(vardas, slaptazodis, email, lytis, gimimoData, LocalDateTime.now());
 
         try (Session session = factory.openSession()) {
             Transaction tx = session.beginTransaction();
