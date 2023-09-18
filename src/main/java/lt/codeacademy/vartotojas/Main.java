@@ -74,17 +74,18 @@ public class Main {
         while (true) {
             System.out.print("""
                                         
-                    ┌──────────────────────────────────┐
-                    │               MENIU              │
-                    ├──────────────────────────────────┤
-                    │ 1 - Ivesti vartotoja             │
-                    │ 2 - Pakeisti esama vartotoja     │
-                    │ 3 - Trinti vartotoja             │
-                    │ 4 - Atspausdinti vartotojus      │
-                    │ 5 - Atspausdinti viena vartotoja │
-                    │ 6 - Sukurti nauja posta          │
-                    │ 7 - Baigti programa              │
-                    └──────────────────────────────────┘
+                    ┌───────────────────────────────────┐
+                    │               MENIU               │
+                    ├───────────────────────────────────┤
+                    │ 1 - Ivesti vartotoja              │
+                    │ 2 - Pakeisti esama vartotoja      │
+                    │ 3 - Trinti vartotoja              │
+                    │ 4 - Atspausdinti vartotojus       │
+                    │ 5 - Atspausdinti viena vartotoja  │
+                    │ 6 - Sukurti nauja posta           │
+                    │ 7 - Atspausdinti vartotojo postus │
+                    │ 8 - Baigti programa               │
+                    └───────────────────────────────────┘
                       Jusu pasirinkimas:\s""");
 
             try {
@@ -101,7 +102,8 @@ public class Main {
                 case 4 -> spausdintiVartotojus(true);
                 case 5 -> spausdintiVartotoja();
                 case 6 -> sukurtiPosta();
-                case 7 -> {
+                case 7 -> spausdintiPostus();
+                case 8 -> {
                     break menu;
                 }
                 default -> System.out.println("Blogas pasirinkimas!");
@@ -113,6 +115,36 @@ public class Main {
         factory.close();
         in.close();
         log.info("Programa baigia darba!");
+    }
+
+    private static void spausdintiPostus() {
+        spausdintiVartotojus(false); // Galima nieko neisvesti jei daug vartotoju.
+
+        System.out.print("Kurio vartotojo postus norite matyti: ");
+        int id;
+        try {
+            id = in.nextInt();
+        } catch (InputMismatchException e) {
+            log.warning("Blogai nurodytas id!");
+            return;
+        } finally {
+            in.nextLine();
+        }
+
+        try (Session session = factory.openSession()) {
+            User user = session.find(User.class, id);
+            if (user == null) {
+                log.warning("Vartotojas nerastas");
+                return;
+            }
+
+            List<Post> posts = user.getPosts();
+            if (!posts.isEmpty()) {
+                posts.forEach(post -> System.out.println("\t- " + post.getPavadinimas() + " | " + post.getTekstas()));
+            } else {
+                log.warning("Vartotojas neturi nei vieno posto!");
+            }
+        }
     }
 
     private static void sukurtiPosta() {
@@ -131,7 +163,7 @@ public class Main {
                             cb.equal(root.get("slaptazodis"), password)
                     ));
             List<User> users = session.createQuery(cq).getResultList();
-            if (users.size() == 1) {
+            if (!users.isEmpty()) {
                 User user = users.get(0);
                 System.out.print("Iveskite posto pavadinima: ");
                 String pavadinimas = in.nextLine();
@@ -188,7 +220,7 @@ public class Main {
         try {
             keiciamasId = in.nextInt();
         } catch (InputMismatchException e) {
-            System.err.println("Blogai nurodytas id!");
+            log.warning("Blogai nurodytas id!");
             return;
         } finally {
             in.nextLine();
@@ -234,7 +266,7 @@ public class Main {
         try {
             id = in.nextInt();
         } catch (InputMismatchException e) {
-            System.err.println("Blogai nurodytas id!");
+            log.warning("Blogai nurodytas id!");
             return;
         } finally {
             in.nextLine();
@@ -322,7 +354,7 @@ public class Main {
         try {
             id = in.nextInt();
         } catch (InputMismatchException e) {
-            System.err.println("Blogai nurodytas id!");
+            log.warning("Blogai nurodytas id!");
         } finally {
             in.nextLine();
         }
