@@ -22,6 +22,7 @@ public class User {
     private int id;
     private String vardas;
     private String slaptazodis;
+    @Column(unique = true)
     private String email;
     private String lytis;
 

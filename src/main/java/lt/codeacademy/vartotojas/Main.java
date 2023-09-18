@@ -1,13 +1,6 @@
 package lt.codeacademy.vartotojas;
 
-import com.mongodb.MongoClient;
-import com.mongodb.client.MongoCollection;
-import com.mongodb.client.MongoDatabase;
-import com.mongodb.client.model.Filters;
-import com.mongodb.client.model.Updates;
-import org.bson.Document;
-import org.bson.conversions.Bson;
-import org.bson.types.ObjectId;
+import lombok.extern.java.Log;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
@@ -21,14 +14,15 @@ import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.InputMismatchException;
 import java.util.List;
-import java.util.Optional;
 import java.util.Scanner;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.logging.*;
 
+@Log
 public class Main {
     static final DateTimeFormatter ISO_LOCAL_DATE_TIME_NO_MILIS = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final SessionFactory factory;
@@ -37,20 +31,34 @@ public class Main {
     static Jedis jedis = jedisPool.getResource();
 
     static {
-        Logger.getLogger("org.mongodb.driver")
-                .setLevel(Level.WARNING);
         Logger.getLogger("org.hibernate").setLevel(Level.WARNING);
         factory = new Configuration().configure().buildSessionFactory();
+        Formatter formatter = new Formatter() {
+            @Override
+            public String format(LogRecord record) {
+                return String.format("[%s %-7s]: %s\n",
+                        LocalTime.ofInstant(record.getInstant(), ZoneId.systemDefault())
+                                .format(DateTimeFormatter.ofPattern("HH:mm:ss")),
+                        record.getLevel(),
+                        record.getMessage());
+            }
+        };
+        log.getParent().getHandlers()[0].setFormatter(formatter);
+        try {
+            Handler fileHandler = new FileHandler("Vartotojas.LOG", true);
+            fileHandler.setFormatter(formatter);
+            log.addHandler(fileHandler);
+        } catch (IOException e) {
+            log.severe("Nepavyko prideti FileHander i loggeri!");
+        }
     }
 
     public static void main(String[] args) {
 
-        MongoClient client = new MongoClient();
-        MongoDatabase db = client.getDatabase("mano");
-
         try (Session session = factory.openSession()) {
             int userCount = session.createQuery("select count(*) FROM User", int.class).getFirstResult();
             jedis.set("vartotojai_size", String.valueOf(userCount));
+            log.info("vartotojai irasyti i cache");
         }
 
         int pasirinkimas;
@@ -80,8 +88,8 @@ public class Main {
             in.nextLine();
             switch (pasirinkimas) {
                 case 1 -> ivestiVartotoja();
-                case 2 -> modifikuotiVartotoja(db);
-                case 3 -> trintiVartotoja(db);
+                case 2 -> modifikuotiVartotoja();
+                case 3 -> trintiVartotoja();
                 case 4 -> spausdintiVartotojus(true);
                 case 5 -> spausdintiVartotoja();
                 case 6 -> {
@@ -94,9 +102,8 @@ public class Main {
         jedis.close();
         jedisPool.close();
         factory.close();
-        client.close();
         in.close();
-        System.out.println("Programa baigia darba!");
+        log.info("Programa baigia darba!");
     }
 
     private static void ivestiVartotoja() {
@@ -124,13 +131,12 @@ public class Main {
 
         jedis.incr("vartotojai_size");
 
-        System.out.println("Vartotojas sukurtas.");
+        log.info("Vartotojas sukurtas.");
         jedis.del("vartotojai");
     }
 
-    private static void modifikuotiVartotoja(MongoDatabase db) {
+    private static void modifikuotiVartotoja() {
         spausdintiVartotojus(false); // Galima nieko neisvesti jei daug vartotoju.
-        MongoCollection<Document> collection = db.getCollection("vartotojai");
         System.out.print("Kuri vartotoja norite keisti: ");
         int keiciamasId;
         try {
@@ -142,50 +148,40 @@ public class Main {
             in.nextLine();
         }
 
-        findId(keiciamasId).ifPresent(objectId -> {
-            Bson filter = Filters.eq("_id", objectId);
-            System.out.print("""
-                    1 - vardas
-                    2 - slaptazodis
-                    3 - email
-                    4 - lytis
-                    Kuri lauka norite keisti:\s""");
-            String pasirinkimas = in.nextLine();
+        try (Session session = factory.openSession()) {
+            User user = session.find(User.class, keiciamasId);
 
-            switch (pasirinkimas) {
-                case "1" -> collection.updateOne(filter, Updates.set("vardas", Ivestis.vardoIvestis()));
-                case "2" -> collection.updateOne(filter, Updates.set("slaptazodis", Ivestis.slaptazodzioIvestis()));
-                case "3" -> collection.updateOne(filter, Updates.set("email", Ivestis.emailIvestis()));
-                case "4" -> collection.updateOne(filter, Updates.set("lytis", Ivestis.lytiesIvestis()));
-                default -> {
-                    System.out.println("Blogas pasirinkimas!");
-                    return;
+            if (user != null) {
+                System.out.print("""
+                        1 - vardas
+                        2 - slaptazodis
+                        3 - email
+                        4 - lytis
+                        Kuri lauka norite keisti:\s""");
+                String pasirinkimas = in.nextLine();
+
+                switch (pasirinkimas) {
+                    case "1" -> user.setVardas(Ivestis.vardoIvestis());
+                    case "2" -> user.setSlaptazodis(Ivestis.slaptazodzioIvestis());
+                    case "3" -> user.setEmail(Ivestis.emailIvestis());
+                    case "4" -> user.setLytis(Ivestis.lytiesIvestis());
+                    default -> {
+                        log.warning("Blogas pasirinkimas!");
+                        return;
+                    }
                 }
+                Transaction tx = session.beginTransaction();
+                session.merge(user);
+                tx.commit();
+                log.info("Vartotojas pakoreguotas.");
+                jedis.del("vartotojai");
+                jedis.del(String.valueOf(keiciamasId));
             }
-            System.out.println("Vartotojas pakoreguotas.");
-            jedis.del("vartotojai");
-            jedis.del(objectId.toHexString());
-        });
-
+        }
     }
 
-    public static Optional<ObjectId> findId(int id) {
-        if (id < 1) {
-            System.out.println("id privalo buti ne maziau uz 1!");
-            return Optional.empty();
-        }
-
-        if (id > jedis.llen("vartotojai_ids")) {
-            System.out.println("Vartotojas tokiu id nerastas!");
-            return Optional.empty();
-        }
-
-        return Optional.of(new ObjectId(jedis.lindex("vartotojai_ids", id - 1)));
-    }
-
-    private static void trintiVartotoja(MongoDatabase db) {
+    private static void trintiVartotoja() {
         spausdintiVartotojus(false); // Galima nieko neisvesti jei daug vartotoju.
-        MongoCollection<Document> collection = db.getCollection("vartotojai");
 
         System.out.print("Kuri vartotoja norite istrinti: ");
         int id;
@@ -207,7 +203,7 @@ public class Main {
             }
         }
 
-        System.out.println("Vartotojas istrintas");
+        log.info("Vartotojas istrintas");
         String idString = String.valueOf(id);
         jedis.decr("vartotojai_size");
         jedis.del("vartotojai");
@@ -217,7 +213,7 @@ public class Main {
     private static void spausdintiVartotojus(boolean menu) {
         long kiekis = Integer.parseInt(jedis.get("vartotojai_size"));
         if (kiekis == 0) {
-            System.out.println("Vartotoju nera!");
+            log.warning("Vartotoju nera!");
             return;
         }
 
@@ -233,7 +229,7 @@ public class Main {
             pasirinkimas = in.nextLine();
 
             if (!pasirinkimas.equals("1") && !pasirinkimas.equals("2") && !pasirinkimas.equals("3")) {
-                System.out.println("Blogas pasirinkimas!");
+                log.warning("Blogas pasirinkimas!");
                 return;
             }
         }
@@ -241,7 +237,7 @@ public class Main {
         String text;
         if (jedis.exists("vartotojai")) {
             text = jedis.get("vartotojai");
-            System.out.println("cache hit!");
+            log.info("cache hit!");
         } else {
             StringBuilder sb = new StringBuilder();
 
@@ -271,7 +267,7 @@ public class Main {
     private static void spausdintiVartotoja() {
         long kiekis = Integer.parseInt(jedis.get("vartotojai_size"));
         if (kiekis == 0) {
-            System.out.println("Vartotoju nera!");
+            log.warning("Vartotoju nera!");
             return;
         }
 
@@ -298,7 +294,7 @@ public class Main {
                 System.out.println(text);
                 jedis.set(idString, text);
             } else {
-                System.out.println("Tokio vartotojo nera!");
+                log.warning("Tokio vartotojo nera!");
             }
         }
     }
@@ -310,9 +306,9 @@ public class Main {
 
         try {
             Files.writeString(file.toPath(), text, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
-            System.out.println("Failas issaugotas vardu: " + filename);
+            log.info("Failas issaugotas vardu: " + filename);
         } catch (IOException e) {
-            System.out.println("Failo issaugoti nepavyko!");
+            log.severe("Failo issaugoti nepavyko!");
         }
     }
 }
